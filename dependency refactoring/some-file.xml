@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<database>
+    <!-- dummy XML file to illustrate nearby XSLT -->
+    <a xml:id="a1">
+        <b/>
+        <c/>
+    </a>
+    <a xml:id="a2">
+        <b/>
+        <c/>
+    </a>
+</database>
