@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<diagnostics>
+   <c:directory xml:base="file:/u:/temp/"
+                name="temp"
+                xmlns:c="http://www.w3.org/ns/xproc-step">
+      <c:file xml:base="testB1.txt"
+              name="testB1.txt"/>
+      <c:directory xml:base="some%20files%20to%20check/"
+                   name="some files to check"/>
+      <c:directory xml:base="some%20more%20files%20to%20check/"
+                   name="some more files to check"/>
+      <c:file xml:base="testB2.txt"
+              name="testB2.txt"/>
+      <c:directory xml:base="temp/"
+                   name="temp"/>
+   </c:directory>
+   <delete xmlns:c="http://www.w3.org/ns/xproc-step"
+           xmlns:xs="http://www.w3.org/2001/XMLSchema">
+      <href>file:/u:/temp/testB1.txt</href>
+   </delete>
+   <delete xmlns:c="http://www.w3.org/ns/xproc-step"
+           xmlns:xs="http://www.w3.org/2001/XMLSchema">
+      <href>file:/u:/temp/testB2.txt</href>
+   </delete>
+   <c:result mox:resource-deleted="true"
+              xmlns:mox="http://www.xml-project.com/morganaxproc"
+             xmlns:c="http://www.w3.org/ns/xproc-step">file:/u:/temp/testB1.txt</c:result>
+   <c:result mox:resource-deleted="true"
+              xmlns:mox="http://www.xml-project.com/morganaxproc"
+             xmlns:c="http://www.w3.org/ns/xproc-step">file:/u:/temp/testB2.txt</c:result>
+   <c:result xmlns:c="http://www.w3.org/ns/xproc-step">2</c:result>
+</diagnostics>
