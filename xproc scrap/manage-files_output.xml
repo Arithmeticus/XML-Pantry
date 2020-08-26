@@ -14,19 +14,17 @@
       <c:directory xml:base="temp/"
                    name="temp"/>
    </c:directory>
-   <delete xmlns:c="http://www.w3.org/ns/xproc-step"
-           xmlns:xs="http://www.w3.org/2001/XMLSchema">
+   <copy xmlns:c="http://www.w3.org/ns/xproc-step"
+         xmlns:xs="http://www.w3.org/2001/XMLSchema">
       <href>file:/u:/temp/testB1.txt</href>
-   </delete>
-   <delete xmlns:c="http://www.w3.org/ns/xproc-step"
-           xmlns:xs="http://www.w3.org/2001/XMLSchema">
+      <target>file:/u:/temp/temp/testB1.txt</target>
+   </copy>
+   <copy xmlns:c="http://www.w3.org/ns/xproc-step"
+         xmlns:xs="http://www.w3.org/2001/XMLSchema">
       <href>file:/u:/temp/testB2.txt</href>
-   </delete>
-   <c:result mox:resource-deleted="true"
-              xmlns:mox="http://www.xml-project.com/morganaxproc"
-             xmlns:c="http://www.w3.org/ns/xproc-step">file:/u:/temp/testB1.txt</c:result>
-   <c:result mox:resource-deleted="true"
-              xmlns:mox="http://www.xml-project.com/morganaxproc"
-             xmlns:c="http://www.w3.org/ns/xproc-step">file:/u:/temp/testB2.txt</c:result>
+      <target>file:/u:/temp/temp/testB2.txt</target>
+   </copy>
+   <c:result xmlns:c="http://www.w3.org/ns/xproc-step">file:/u:/temp/temp/testB1.txt</c:result>
+   <c:result xmlns:c="http://www.w3.org/ns/xproc-step">file:/u:/temp/temp/testB2.txt</c:result>
    <c:result xmlns:c="http://www.w3.org/ns/xproc-step">2</c:result>
 </diagnostics>

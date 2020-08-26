@@ -21,7 +21,7 @@
    <p:directory-list path="{$dir-a-path}" name="dir-a-list"/>
 
    <p:xslt name="dir-files" parameters="map{
-      'file-operation': 'delete',
+      'file-operation': 'copy',
       'target-dir': $dir-b-path,
       'filename-must-match-regex': '',
       'filename-must-not-match-regex': ''
