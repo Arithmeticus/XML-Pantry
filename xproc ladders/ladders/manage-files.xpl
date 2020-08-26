@@ -35,12 +35,7 @@
    
    <p:directory-list path="{$source-directory-resolved}" name="dir-list"/>
 
-   <p:xslt name="dir-files" parameters="map{
-      'file-operation': $file-operation,
-      'target-directory-relative-to-source': $target-directory-relative-to-source,
-      'filenames-to-include': $filenames-to-include,
-      'filenames-to-exclude': $filenames-to-exclude,
-      'pattern-type': $pattern-type}">
+   <p:xslt name="dir-files" parameters="$xslt-map">
       <p:with-input port="stylesheet" href="prepare-file-operations.xsl"/>
    </p:xslt>
    
