@@ -1,10 +1,14 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <p:declare-step xmlns:p="http://www.w3.org/ns/xproc" xmlns:xs="http://www.w3.org/2001/XMLSchema"
+   xmlns:ladder="tag:kalvesmaki.com,2020:ns" type="ladder:manage-files"
    name="manage-files" xmlns:c="http://www.w3.org/ns/xproc-step" version="3.0">
    
    <!-- Started August 2020, Joel Kalvesmaki -->
    <!-- Prototype for short XProc ladders to assist in file management. -->
    
+   <p:import href="copy-files.xpl"/>
+   <p:import href="delete-files.xpl"/>
+   <p:import href="move-files.xpl"/>
    
    <p:input port="source" primary="true">
       <p:inline>
@@ -13,20 +17,35 @@
    </p:input>
 
    <p:output port="result" serialization="map{ 'indent': true() }"/>
-
+   
+   <p:option name="file-operation" required="true" as="xs:string"
+      values="('copy', 'delete', 'move')"/>
+   <p:option name="source-directory-resolved" as="xs:string"/>
+   <p:option name="target-directory-relative-to-source" as="xs:string"/>
+   <p:option name="filenames-to-include" as="xs:string?"/>
+   <p:option name="filenames-to-exclude" as="xs:string?"/>
+   <p:option name="pattern-type" as="xs:string" values="('glob', 'regex')" select="'glob'"/>
+   
 
    <!-- MAIN STEPS BEGIN HERE -->
-   <p:variable name="dir-a-path" select="'file:/u:/temp'" as="xs:string"/>
-   <p:variable name="dir-b-path" select="'file:/u:/temp/temp'" as="xs:string"/>
-   <p:directory-list path="{$dir-a-path}" name="dir-a-list"/>
+   <p:variable name="xslt-map"
+      select="map{
+      'file-operation': $file-operation,
+      'target-directory-relative-to-source': $target-directory-relative-to-source,
+      'filenames-to-include': $filenames-to-include,
+      'filenames-to-exclude': $filenames-to-exclude,
+      'pattern-type': $pattern-type}"
+   />
+   
+   <p:directory-list path="{$source-directory-resolved}" name="dir-list"/>
 
    <p:xslt name="dir-files" parameters="map{
-      'file-operation': 'copy',
-      'target-dir': $dir-b-path,
-      'filename-must-match-regex': '',
-      'filename-must-not-match-regex': ''
-      }">
-      <p:with-input port="stylesheet" href="files.xsl"/>
+      'file-operation': $file-operation,
+      'target-directory-relative-to-source': $target-directory-relative-to-source,
+      'filenames-to-include': $filenames-to-include,
+      'filenames-to-exclude': $filenames-to-exclude,
+      'pattern-type': $pattern-type}">
+      <p:with-input port="stylesheet" href="prepare-file-operations.xsl"/>
    </p:xslt>
    
    <p:for-each name="dir-file-move">
@@ -67,7 +86,7 @@
          <p:pipe port="source" step="manage-files"/>
       </p:with-input>
       <p:with-input port="insertion">
-         <p:pipe port="result" step="dir-a-list"/>
+         <p:pipe port="result" step="dir-list"/>
          <p:pipe port="result" step="dir-files"/>
          <p:pipe port="move-result" step="dir-file-move"/>
          <p:pipe port="copy-result" step="dir-file-copy"/>
