@@ -6,10 +6,6 @@
    <!-- Started August 2020, Joel Kalvesmaki -->
    <!-- Prototype for short XProc ladders to assist in file management. -->
    
-   <p:import href="copy-files.xpl"/>
-   <p:import href="delete-files.xpl"/>
-   <p:import href="move-files.xpl"/>
-   
    <p:input port="source" primary="true">
       <p:inline>
          <diagnostics/>
