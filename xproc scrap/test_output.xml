@@ -1,52 +1,100 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <diagnostics>
-   <c:directory xml:base="file:/u:/temp/temp/"
-                name="temp"
-                xmlns:c="http://www.w3.org/ns/xproc-step">
-      <c:file xml:base="testB2%20-%20Copy.txt"
-              name="testB2 - Copy.txt"/>
-      <c:file xml:base="testB3%20-%20Copy.txt"
-              name="testB3 - Copy.txt"/>
-   </c:directory>
-   <delete xmlns:ladder="tag:kalvesmaki.com,2020:ns"
-           xmlns:c="http://www.w3.org/ns/xproc-step"
-           xmlns:xs="http://www.w3.org/2001/XMLSchema">
-      <href>file:/u:/temp/temp/testB2%20-%20Copy.txt</href>
-   </delete>
-   <delete xmlns:ladder="tag:kalvesmaki.com,2020:ns"
-           xmlns:c="http://www.w3.org/ns/xproc-step"
-           xmlns:xs="http://www.w3.org/2001/XMLSchema">
-      <href>file:/u:/temp/temp/testB3%20-%20Copy.txt</href>
-   </delete>
-   <c:result mox:resource-deleted="true"
-              xmlns:mox="http://www.xml-project.com/morganaxproc"
-             xmlns:c="http://www.w3.org/ns/xproc-step">file:/u:/temp/temp/testB2%20-%20Copy.txt</c:result>
-   <c:result mox:resource-deleted="true"
-              xmlns:mox="http://www.xml-project.com/morganaxproc"
-             xmlns:c="http://www.w3.org/ns/xproc-step">file:/u:/temp/temp/testB3%20-%20Copy.txt</c:result>
-   <c:result xmlns:c="http://www.w3.org/ns/xproc-step">2</c:result>
-   <c:directory xml:base="file:/u:/temp/"
-                name="temp"
-                xmlns:c="http://www.w3.org/ns/xproc-step">
-      <c:file xml:base="testB1.txt"
-              name="testB1.txt"/>
-      <c:directory xml:base="some%20files%20to%20check/"
-                   name="some files to check"/>
-      <c:directory xml:base="some%20more%20files%20to%20check/"
-                   name="some more files to check"/>
-      <c:file xml:base="testB2.txt"
-              name="testB2.txt"/>
-      <c:file xml:base="testB2%20-%20Copy.txt"
-              name="testB2 - Copy.txt"/>
-      <c:directory xml:base="temp/"
-                   name="temp"/>
-   </c:directory>
-   <copy xmlns:ladder="tag:kalvesmaki.com,2020:ns"
-         xmlns:c="http://www.w3.org/ns/xproc-step"
-         xmlns:xs="http://www.w3.org/2001/XMLSchema">
-      <href>file:/u:/temp/testB2%20-%20Copy.txt</href>
-      <target>file:/u:/temp/temp/testB2%20-%20Copy.txt</target>
-   </copy>
-   <c:result xmlns:c="http://www.w3.org/ns/xproc-step">file:/u:/temp/temp/testB2%20-%20Copy.txt</c:result>
-   <c:result xmlns:c="http://www.w3.org/ns/xproc-step">1</c:result>
+   <input-options>
+      <file-operation>move</file-operation>
+      <source-directory-resolved>file:/u:/temp</source-directory-resolved>
+      <target-directory-relative-to-source>temp</target-directory-relative-to-source>
+      <filenames-to-include>*</filenames-to-include>
+      <filenames-to-exclude/>
+      <pattern-type>glob</pattern-type>
+      <overwrite>older</overwrite>
+      <recurse>true</recurse>
+   </input-options>
+   <step-results>
+      <source-directory-list>
+         <c:directory xml:base="file:/u:/temp/"
+                      name="temp"
+                      readable="true"
+                      writable="true"
+                      hidden="false"
+                      last-modified="2020-08-27T09:02:48.28Z"
+                      size="0"
+                      xmlns:c="http://www.w3.org/ns/xproc-step">
+            <c:directory xml:base="folder1/"
+                         name="folder1"
+                         readable="true"
+                         writable="true"
+                         hidden="false"
+                         last-modified="2020-08-27T09:03:05.8Z"
+                         size="0">
+               <c:file xml:base="testA1%20-%20Copy.txt"
+                       name="testA1 - Copy.txt"
+                       content-type="text/plain"
+                       readable="true"
+                       writable="true"
+                       hidden="false"
+                       last-modified="2020-08-27T09:03:00.5Z"
+                       size="0"/>
+               <c:file xml:base="testA1.txt"
+                       name="testA1.txt"
+                       content-type="text/plain"
+                       readable="true"
+                       writable="true"
+                       hidden="false"
+                       last-modified="2020-08-27T09:03:00.5Z"
+                       size="0"/>
+            </c:directory>
+            <c:file xml:base="testB2%20-%20Copy.txt"
+                    name="testB2 - Copy.txt"
+                    content-type="text/plain"
+                    readable="true"
+                    writable="true"
+                    hidden="false"
+                    last-modified="2020-08-21T06:28:45.77Z"
+                    size="4"/>
+            <c:directory xml:base="temp/"
+                         name="temp"
+                         readable="true"
+                         writable="true"
+                         hidden="false"
+                         last-modified="2020-08-27T09:01:52.23Z"
+                         size="0">
+               <c:file xml:base="testB2%20-%20Copy.txt"
+                       name="testB2 - Copy.txt"
+                       content-type="text/plain"
+                       readable="true"
+                       writable="true"
+                       hidden="false"
+                       last-modified="2020-08-27T08:03:49.35Z"
+                       size="8"/>
+            </c:directory>
+         </c:directory>
+      </source-directory-list>
+      <target-directory-resolved>file:/u:/temp/temp/</target-directory-resolved>
+      <target-directory-list>
+         <c:directory xml:base="file:/u:/temp/temp/"
+                      name="temp"
+                      readable="true"
+                      writable="true"
+                      hidden="false"
+                      last-modified="2020-08-27T09:01:52.23Z"
+                      size="0"
+                      xmlns:c="http://www.w3.org/ns/xproc-step">
+            <c:file xml:base="testB2%20-%20Copy.txt"
+                    name="testB2 - Copy.txt"
+                    content-type="text/plain"
+                    readable="true"
+                    writable="true"
+                    hidden="false"
+                    last-modified="2020-08-27T08:03:49.35Z"
+                    size="8"/>
+         </c:directory>
+      </target-directory-list>
+      <number-of-files-acted-on>
+         <c:result xmlns:c="http://www.w3.org/ns/xproc-step">1</c:result>
+      </number-of-files-acted-on>
+      <actions-taken>
+         <c:result xmlns:c="http://www.w3.org/ns/xproc-step">file:/u:/temp/temp/folder1/</c:result>
+      </actions-taken>
+   </step-results>
 </diagnostics>

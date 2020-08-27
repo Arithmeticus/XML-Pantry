@@ -6,6 +6,9 @@
    <!-- Started August 2020, Joel Kalvesmaki -->
    <!-- Input: a document that is the result of XProc step <p:directory-list> -->
    <!-- Output: one document per matching file with elements describing the action to take (copy, move, or delete), the filename, and the location -->
+   
+   <xsl:import href="ladder-functions.xsl"/>
+   
    <!-- Very important to set build-tree to false, so that there is really a sequence of output documents. -->
    <xsl:output build-tree="false"/>
 
@@ -20,11 +23,15 @@
    <!-- What is the desired operation: copy, delete, or move? -->
    <xsl:param name="file-operation" required="yes" as="xs:string"/>
    <!-- What pattern must the local filename (base name plus extension) match? If empty, no files will be filtered out. -->
-   <xsl:param name="filenames-to-include" as="xs:string?"/>
+   <xsl:param name="filenames-to-include" as="xs:string*"/>
    <!-- What pattern must the local filename (base name plus extension) NOT match? If empty, no files will be filtered out. -->
-   <xsl:param name="filenames-to-exclude" as="xs:string?"/>
+   <xsl:param name="filenames-to-exclude" as="xs:string*"/>
    <!-- Are pattern types glob-like or regular expressions? -->
    <xsl:param name="pattern-type" as="xs:string" select="'glob'"/>
+   <!-- Which target files may be overwritten?Expected string values: all, none, older -->
+   <xsl:param name="overwrite" as="xs:string" select="'none'"/>
+   <!-- What is the directory for the target directory? Required if $overwrite is not 'all' -->
+   <xsl:param name="target-directory-list" as="document-node()*"/>
    
    
    <!-- NORMALIZE INPUT PARAMETERS, ASSESS CONDITIONS -->
@@ -37,52 +44,62 @@
    </xsl:variable>
    
    <xsl:variable name="source-directory-resolved" select="/*/@xml:base"/>
-   <xsl:variable name="target-dir-norm"
+   <xsl:variable name="target-dir-path-norm"
       select="replace(resolve-uri($target-directory-relative-to-source, $source-directory-resolved), '[^/]$', '$0/')"
    />
-   
-   <xsl:function name="ladder:glob-to-regex" as="xs:string*">
-      <!-- Input: any strings that follow a glob-like syntax -->
-      <!-- Output: the strings converted to regular expressions -->
-      <!-- This function assumes that instances of the comma (optionally followed by space) separate multiple globs -->
-      <xsl:param name="globs" as="xs:string*"/>
-      <xsl:for-each select="$globs">
-         <!-- 1st escape any special regex characters that are not glob special characters -->
-         <xsl:variable name="pass1" select="replace(., '([\\\+\|\^\$\{\}\(\)])', '\\$0')"/>
-         <!-- Next replace the * with regex 0 or more characters -->
-         <xsl:variable name="pass2" select="replace($pass1, '\*', '.*')"/>
-         <!-- Next replace the ? with regex 1 character -->
-         <xsl:variable name="pass3" select="replace($pass2, '\?', '.')"/>
-         <!-- The glob character class, marked by [ ], need not be tampered with -->
-         <!-- We bind the ending to the end of the string ($) since a glob user assumes nothing beyond the last string -->
-         <!-- We bind the opening either to a slash or to the beginning of a string, since the pattern could be a relative or resolved filename -->
-         <xsl:variable name="pass4" select="for $i in tokenize($pass3, ',\s*') return ('^' || $i || '$|/' || $i || '$')"/>
-         <xsl:value-of select="string-join($pass4, '|')"/>
-      </xsl:for-each>
-   </xsl:function>
    
    <xsl:variable name="filename-must-match-regex" as="xs:string?"
       select="
          if ($pattern-type = 'glob') then
             ladder:glob-to-regex($filenames-to-include)
          else
-            $filenames-to-include"
+            string-join($filenames-to-include, '|')"
    />
    <xsl:variable name="filename-must-not-match-regex" as="xs:string?"
       select="
          if ($pattern-type = 'glob') then
             ladder:glob-to-regex($filenames-to-exclude)
          else
-            $filenames-to-exclude"
+            string-join($filenames-to-exclude, '|')"
    />
    
    <xsl:variable name="filenames-should-be-changed"
       select="string-length($filename-change-pattern) gt 0 and string-length($filename-change-replacement) gt 0"
    />
    
+   <xsl:variable name="overwrite-norm" as="xs:string?">
+      <xsl:choose>
+         <xsl:when test="lower-case($overwrite) eq 'all'">all</xsl:when>
+         <xsl:when test="lower-case($overwrite) eq 'none'">none</xsl:when>
+         <xsl:when test="lower-case($overwrite) eq 'older'">older</xsl:when>
+      </xsl:choose>
+   </xsl:variable>
+   
+   <xsl:variable name="target-directory-list-prepped" as="document-node()*">
+      <xsl:if test="not($overwrite-norm eq 'all')">
+         <xsl:apply-templates select="$target-directory-list" mode="prep-target-dir-list"/>
+      </xsl:if>
+   </xsl:variable>
+   <xsl:key name="target-entries" use="@resolved-uri" match="*"/>
+   <xsl:template match="/" mode="prep-target-dir-list">
+      <xsl:document>
+         <xsl:apply-templates mode="#current"/>
+      </xsl:document>
+   </xsl:template>
+   <xsl:template match="*" mode="prep-target-dir-list">
+      <xsl:copy>
+         <xsl:copy-of select="@*"/>
+         <xsl:attribute name="resolved-uri"
+            select="string-join(ancestor-or-self::*[@xml:base]/@xml:base)"/>
+         <xsl:apply-templates mode="#current"/>
+      </xsl:copy>
+   </xsl:template>
+   
+   
+   
    
    <!-- RETURN RESULTS -->
-   <xsl:template match="/*">
+   <xsl:template match="/*" priority="1">
       <xsl:choose>
          <xsl:when test="$operation-picked = ('move', 'copy') 
             and string-length($target-directory-relative-to-source) lt 1">
@@ -100,10 +117,13 @@
       
    </xsl:template>
 
-   <xsl:template match="c:file">
+   <xsl:template match="c:file | c:directory">
+      <xsl:param name="relative-path-so-far" as="xs:string?"/>
       <xsl:variable name="this-filename" select="@name"/>
-      <!-- matches should not be cases-sensitive -->
-      <xsl:variable name="act-on-this-file" as="xs:boolean"
+      <xsl:variable name="target-resolved-uri" select="$target-dir-path-norm || $relative-path-so-far || @xml:base"/>
+
+      <!-- matches should not be case-sensitive -->
+      <xsl:variable name="filename-is-ok" as="xs:boolean"
          select="
             (if (string-length($filename-must-match-regex) gt 0) then
                (matches($this-filename, $filename-must-match-regex, 'i'))
@@ -113,6 +133,36 @@
             else
                true())"
       />
+      <xsl:variable name="corresponding-target-dir-list-entries"
+         select="
+            for $i in $target-directory-list-prepped
+            return
+               key('target-entries', $target-resolved-uri, $i)"
+      />
+      <xsl:variable name="this-dateTime" select="xs:dateTime(@last-modified)"/>
+      <xsl:variable name="target-dateTime"
+         select="xs:dateTime($corresponding-target-dir-list-entries[@last-modified][1]/@last-modified)"
+      />
+      <xsl:variable name="preserve-target" as="xs:boolean">
+         <xsl:choose>
+            <xsl:when test="not($filename-is-ok) or not(exists($corresponding-target-dir-list-entries)) or ($overwrite-norm eq 'all')">
+               <xsl:sequence select="false()"/>
+            </xsl:when>
+            <xsl:when test="($overwrite-norm eq 'none')">
+               <xsl:sequence select="exists($corresponding-target-dir-list-entries)"/>
+            </xsl:when>
+            <!-- overwrite = 'older' -->
+            <xsl:when test="exists($corresponding-target-dir-list-entries) and (not(exists($this-dateTime)) or not(exists($target-dateTime)))">
+               <xsl:message select="'A request to overwrite only older files requires that both the source and target directory lists be populated with @last-modified information.'"/>
+               <xsl:sequence select="true()"/>
+            </xsl:when>
+            <xsl:otherwise>
+               <xsl:sequence select="not($this-dateTime gt $target-dateTime)"/>
+            </xsl:otherwise>
+         </xsl:choose>
+      </xsl:variable>
+      <xsl:variable name="act-on-this-file" as="xs:boolean"
+         select="$filename-is-ok and not($preserve-target)"/>
       <xsl:variable name="new-name"
          select="
             if ($filenames-should-be-changed) then
@@ -120,15 +170,46 @@
             else
                @xml:base"
       />
-      <xsl:if test="$act-on-this-file">
-         <xsl:document>
-            <xsl:element name="{$operation-picked}">
-               <href><xsl:value-of select="../@xml:base || @xml:base"/></href>
-               <xsl:if test="$operation-picked = ('move', 'copy')">
-                  <target><xsl:value-of select="$target-dir-norm || @xml:base"/></target>
-               </xsl:if>
-            </xsl:element>
-         </xsl:document>
-      </xsl:if>
+      <xsl:variable name="this-source-href" select="string-join(ancestor-or-self::*[@xml:base]/@xml:base)"/>
+      
+      <!-- For development and testing -->
+      <xsl:variable name="inline-diagnostics-on" select="true()"/>
+      
+      <xsl:choose>
+         <xsl:when test="$act-on-this-file and ($this-source-href eq $target-dir-path-norm)">
+            <xsl:message
+               select="'Cannot ' || $operation-picked || ' ' || $this-source-href || ' into itself. Other operations will be attempted.'"
+            />
+         </xsl:when>
+         <xsl:when test="$act-on-this-file">
+            <xsl:document>
+               <xsl:element name="{$operation-picked}">
+                  <href><xsl:value-of select="$this-source-href"/></href>
+                  <xsl:if test="$operation-picked = ('move', 'copy')">
+                     <target><xsl:value-of select="$target-dir-path-norm || $relative-path-so-far || @xml:base"/></target>
+                  </xsl:if>
+                  <xsl:if test="$inline-diagnostics-on">
+                     <diagnostics>
+                        <target-resolved-urui><xsl:value-of select="$target-resolved-uri"/></target-resolved-urui>
+                        <file-must-match-regex><xsl:value-of select="$filename-must-match-regex"/></file-must-match-regex>
+                        <file-must-not-match-regex><xsl:value-of select="$filename-must-not-match-regex"/></file-must-not-match-regex>
+                        <filename-ok><xsl:value-of select="$filename-is-ok"/></filename-ok>
+                        <corresponding-target-dir-list-entrise><xsl:copy-of select="$corresponding-target-dir-list-entries"/></corresponding-target-dir-list-entrise>
+                        <this-dateTime><xsl:copy-of select="$this-dateTime"/></this-dateTime>
+                        <target-dateTime><xsl:copy-of select="$target-dateTime"/></target-dateTime>
+                        <preserve-target><xsl:value-of select="$preserve-target"/></preserve-target>
+                        <act-on-this-file><xsl:value-of select="$act-on-this-file"/></act-on-this-file>
+                     </diagnostics>
+                  </xsl:if>
+               </xsl:element>
+            </xsl:document>
+         </xsl:when>
+         <xsl:otherwise>
+            <!-- If this is a directory, we keep going to the contents. -->
+            <xsl:apply-templates>
+               <xsl:with-param name="relative-path-so-far" select="@xml:base"/>
+            </xsl:apply-templates>
+         </xsl:otherwise>
+      </xsl:choose>
    </xsl:template>
 </xsl:stylesheet>
