@@ -10,8 +10,10 @@
       complete access to the entire XProc Ladder library.
    -->
    
+   <p:import href="ladders/chop-tree.xpl"/>   
    <p:import href="ladders/copy-files.xpl"/>   
    <p:import href="ladders/delete-files.xpl"/>   
+   <p:import href="ladders/expand-attributes.xpl"/>   
    <p:import href="ladders/move-files.xpl"/>
    <!-- Feature import-functions not available in current working edition of Morgana -->
    <!--<p:import-functions href="ladders/ladder-functions.xsl"/>-->
