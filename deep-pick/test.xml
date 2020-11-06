@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<a>
+   <b/>
+   <b>
+      <c/>
+   </b>
+   <b>
+      <c>
+         <d/>
+      </c>
+   </b>
+   <b>
+      <c>
+         <d>
+            <da-deepest-element-a-all>
+               <!-- deeper comment -->
+            </da-deepest-element-a-all>
+         </d>
+      </c>
+   </b>
+</a>
