@@ -6,7 +6,7 @@
    <map-1>
       <map xmlns="http://www.w3.org/2005/xpath-functions/map">
          <entry>
-            <key type="xs:dateTime">2021-04-17T01:54:22.304-04:00</key>
+            <key type="xs:dateTime">2021-05-25T22:43:05.448-04:00</key>
             <value>
                <item type="array">
                   <array xmlns="http://www.w3.org/2005/xpath-functions/array">
@@ -75,7 +75,7 @@
    <map-1-transformed>
       <map xmlns="http://www.w3.org/2005/xpath-functions/map">
          <entry>
-            <key type="xs:dateTime">2021-04-17T01:54:22.304-04:00</key>
+            <key type="xs:dateTime">2021-05-25T22:43:05.448-04:00</key>
             <value>
                <item type="array">
                   <array xmlns="http://www.w3.org/2005/xpath-functions/array">
@@ -128,10 +128,10 @@
                                        <array-member-numbers xmlns="">3</array-member-numbers>
                                     </item>
                                     <item type="element">
-                                       <map-entry-keys xmlns="">2021-04-17T01:54:22.304-04:00 false</map-entry-keys>
+                                       <map-entry-keys xmlns="">2021-05-25T22:43:05.448-04:00 false</map-entry-keys>
                                     </item>
                                     <item type="element">
-                                       <test xmlns="">Yes, the topmost map entry that contains me has a key tied to the current dateTime, 2021-04-17T01:54:22.304-04:00</test>
+                                       <test xmlns="">Yes, the topmost map entry that contains me has a key tied to the current dateTime, 2021-05-25T22:43:05.448-04:00</test>
                                     </item>
                                  </value>
                               </entry>
@@ -150,12 +150,12 @@
          </entry>
       </map>
    </map-1-transformed>
-   <map-1-keys-shallow>4 2021-04-17T01:54:22.304-04:00</map-1-keys-shallow>
-   <map-1-keys-deep>4 2021-04-17T01:54:22.304-04:00 false 4 5.5</map-1-keys-deep>
+   <map-1-keys-shallow>4 2021-05-25T22:43:05.448-04:00</map-1-keys-shallow>
+   <map-1-keys-deep>4 2021-05-25T22:43:05.448-04:00 false 4 5.5</map-1-keys-deep>
    <map-1-as-array>
       <array xmlns="http://www.w3.org/2005/xpath-functions/array">
          <member>
-            <item type="xs:dateTime">2021-04-17T01:54:22.304-04:00</item>
+            <item type="xs:dateTime">2021-05-25T22:43:05.448-04:00</item>
          </member>
          <member>
             <item type="array">
@@ -292,7 +292,7 @@
          <entry>
             <key type="xs:integer">3</key>
             <value>
-               <item type="xs:dateTime">2021-04-17T01:54:22.304-04:00</item>
+               <item type="xs:dateTime">2021-05-25T22:43:05.448-04:00</item>
             </value>
          </entry>
          <entry>
@@ -371,7 +371,60 @@
          </entry>
       </map>
    </map-1-to-array-back-to-map>
-   <map-1-entry-replaced>
+   <map-remove>
+      <map xmlns="http://www.w3.org/2005/xpath-functions/map">
+         <entry>
+            <key type="xs:integer">4</key>
+            <value>
+               <item type="xs:string">four again</item>
+            </value>
+         </entry>
+         <entry>
+            <key type="xs:dateTime">2021-05-25T22:43:05.448-04:00</key>
+            <value>
+               <item type="array">
+                  <array xmlns="http://www.w3.org/2005/xpath-functions/array">
+                     <member/>
+                     <member>
+                        <item type="array">
+                           <array>
+                              <member>
+                                 <item type="xs:integer">1</item>
+                              </member>
+                              <member>
+                                 <item type="xs:integer">2</item>
+                              </member>
+                              <member>
+                                 <item type="xs:integer">3</item>
+                              </member>
+                           </array>
+                        </item>
+                     </member>
+                     <member>
+                        <item type="map">
+                           <map xmlns="http://www.w3.org/2005/xpath-functions/map">
+                              <entry>
+                                 <key type="xs:integer">4</key>
+                                 <value>
+                                    <item type="xs:string">four</item>
+                                 </value>
+                              </entry>
+                              <entry>
+                                 <key type="xs:decimal">5.5</key>
+                                 <value>
+                                    <item type="xs:boolean">true</item>
+                                 </value>
+                              </entry>
+                           </map>
+                        </item>
+                     </member>
+                  </array>
+               </item>
+            </value>
+         </entry>
+      </map>
+   </map-remove>
+   <map-1-put-entry-everywhere>
       <map xmlns="http://www.w3.org/2005/xpath-functions/map">
          <entry>
             <key type="xs:integer">4</key>
@@ -380,7 +433,7 @@
             </value>
          </entry>
          <entry>
-            <key type="xs:dateTime">2021-04-17T01:54:22.304-04:00</key>
+            <key type="xs:dateTime">2021-05-25T22:43:05.448-04:00</key>
             <value>
                <item type="array">
                   <array xmlns="http://www.w3.org/2005/xpath-functions/array">
@@ -439,8 +492,8 @@
             </value>
          </entry>
       </map>
-   </map-1-entry-replaced>
-   <map-remove>
+   </map-1-put-entry-everywhere>
+   <map-1-put-entry-at-depth-2>
       <map xmlns="http://www.w3.org/2005/xpath-functions/map">
          <entry>
             <key type="xs:integer">4</key>
@@ -449,7 +502,7 @@
             </value>
          </entry>
          <entry>
-            <key type="xs:dateTime">2021-04-17T01:54:22.304-04:00</key>
+            <key type="xs:dateTime">2021-05-25T22:43:05.448-04:00</key>
             <value>
                <item type="array">
                   <array xmlns="http://www.w3.org/2005/xpath-functions/array">
@@ -473,6 +526,91 @@
                         <item type="map">
                            <map xmlns="http://www.w3.org/2005/xpath-functions/map">
                               <entry>
+                                 <key type="xs:boolean">false</key>
+                                 <value>
+                                    <item type="array">
+                                       <array xmlns="http://www.w3.org/2005/xpath-functions/array">
+                                          <member>
+                                             <item type="xs:integer">6</item>
+                                          </member>
+                                          <member>
+                                             <item type="xs:integer">7</item>
+                                             <item type="xs:integer">8</item>
+                                          </member>
+                                       </array>
+                                    </item>
+                                 </value>
+                              </entry>
+                              <entry>
+                                 <key type="xs:integer">4</key>
+                                 <value>
+                                    <item type="xs:string">woo hoo</item>
+                                 </value>
+                              </entry>
+                              <entry>
+                                 <key type="xs:decimal">5.5</key>
+                                 <value>
+                                    <item type="xs:boolean">true</item>
+                                 </value>
+                              </entry>
+                           </map>
+                        </item>
+                     </member>
+                  </array>
+               </item>
+            </value>
+         </entry>
+      </map>
+   </map-1-put-entry-at-depth-2>
+   <map-1-put-entry-alongside-current-dateTime>
+      <map xmlns="http://www.w3.org/2005/xpath-functions/map">
+         <entry>
+            <key type="xs:integer">4</key>
+            <value>
+               <item type="xs:string">woo hoo</item>
+            </value>
+         </entry>
+         <entry>
+            <key type="xs:dateTime">2021-05-25T22:43:05.448-04:00</key>
+            <value>
+               <item type="array">
+                  <array xmlns="http://www.w3.org/2005/xpath-functions/array">
+                     <member/>
+                     <member>
+                        <item type="array">
+                           <array>
+                              <member>
+                                 <item type="xs:integer">1</item>
+                              </member>
+                              <member>
+                                 <item type="xs:integer">2</item>
+                              </member>
+                              <member>
+                                 <item type="xs:integer">3</item>
+                              </member>
+                           </array>
+                        </item>
+                     </member>
+                     <member>
+                        <item type="map">
+                           <map xmlns="http://www.w3.org/2005/xpath-functions/map">
+                              <entry>
+                                 <key type="xs:boolean">false</key>
+                                 <value>
+                                    <item type="array">
+                                       <array xmlns="http://www.w3.org/2005/xpath-functions/array">
+                                          <member>
+                                             <item type="xs:integer">6</item>
+                                          </member>
+                                          <member>
+                                             <item type="xs:integer">7</item>
+                                             <item type="xs:integer">8</item>
+                                          </member>
+                                       </array>
+                                    </item>
+                                 </value>
+                              </entry>
+                              <entry>
                                  <key type="xs:integer">4</key>
                                  <value>
                                     <item type="xs:string">four</item>
@@ -492,5 +630,202 @@
             </value>
          </entry>
       </map>
-   </map-remove>
+   </map-1-put-entry-alongside-current-dateTime>
+   <map-1-put-entry-at-depth-2-alongside-current-dateTime>
+      <map xmlns="http://www.w3.org/2005/xpath-functions/map">
+         <entry>
+            <key type="xs:integer">4</key>
+            <value>
+               <item type="xs:string">four again</item>
+            </value>
+         </entry>
+         <entry>
+            <key type="xs:dateTime">2021-05-25T22:43:05.448-04:00</key>
+            <value>
+               <item type="array">
+                  <array xmlns="http://www.w3.org/2005/xpath-functions/array">
+                     <member/>
+                     <member>
+                        <item type="array">
+                           <array>
+                              <member>
+                                 <item type="xs:integer">1</item>
+                              </member>
+                              <member>
+                                 <item type="xs:integer">2</item>
+                              </member>
+                              <member>
+                                 <item type="xs:integer">3</item>
+                              </member>
+                           </array>
+                        </item>
+                     </member>
+                     <member>
+                        <item type="map">
+                           <map xmlns="http://www.w3.org/2005/xpath-functions/map">
+                              <entry>
+                                 <key type="xs:boolean">false</key>
+                                 <value>
+                                    <item type="array">
+                                       <array xmlns="http://www.w3.org/2005/xpath-functions/array">
+                                          <member>
+                                             <item type="xs:integer">6</item>
+                                          </member>
+                                          <member>
+                                             <item type="xs:integer">7</item>
+                                             <item type="xs:integer">8</item>
+                                          </member>
+                                       </array>
+                                    </item>
+                                 </value>
+                              </entry>
+                              <entry>
+                                 <key type="xs:integer">4</key>
+                                 <value>
+                                    <item type="xs:string">four</item>
+                                 </value>
+                              </entry>
+                              <entry>
+                                 <key type="xs:decimal">5.5</key>
+                                 <value>
+                                    <item type="xs:boolean">true</item>
+                                 </value>
+                              </entry>
+                           </map>
+                        </item>
+                     </member>
+                  </array>
+               </item>
+            </value>
+         </entry>
+      </map>
+   </map-1-put-entry-at-depth-2-alongside-current-dateTime>
+   <map-1-put-own-map-entries-alongside-5-5>
+      <map xmlns="http://www.w3.org/2005/xpath-functions/map">
+         <entry>
+            <key type="xs:integer">4</key>
+            <value>
+               <item type="xs:string">four again</item>
+            </value>
+         </entry>
+         <entry>
+            <key type="xs:dateTime">2021-05-25T22:43:05.448-04:00</key>
+            <value>
+               <item type="array">
+                  <array xmlns="http://www.w3.org/2005/xpath-functions/array">
+                     <member/>
+                     <member>
+                        <item type="array">
+                           <array>
+                              <member>
+                                 <item type="xs:integer">1</item>
+                              </member>
+                              <member>
+                                 <item type="xs:integer">2</item>
+                              </member>
+                              <member>
+                                 <item type="xs:integer">3</item>
+                              </member>
+                           </array>
+                        </item>
+                     </member>
+                     <member>
+                        <item type="map">
+                           <map xmlns="http://www.w3.org/2005/xpath-functions/map">
+                              <entry>
+                                 <key type="xs:boolean">false</key>
+                                 <value>
+                                    <item type="array">
+                                       <array xmlns="http://www.w3.org/2005/xpath-functions/array">
+                                          <member>
+                                             <item type="xs:integer">6</item>
+                                          </member>
+                                          <member>
+                                             <item type="xs:integer">7</item>
+                                             <item type="xs:integer">8</item>
+                                          </member>
+                                       </array>
+                                    </item>
+                                 </value>
+                              </entry>
+                              <entry>
+                                 <key type="xs:integer">4</key>
+                                 <value>
+                                    <item type="xs:string">four again</item>
+                                 </value>
+                              </entry>
+                              <entry>
+                                 <key type="xs:decimal">5.5</key>
+                                 <value>
+                                    <item type="xs:boolean">true</item>
+                                 </value>
+                              </entry>
+                              <entry>
+                                 <key type="xs:dateTime">2021-05-25T22:43:05.448-04:00</key>
+                                 <value>
+                                    <item type="array">
+                                       <array xmlns="http://www.w3.org/2005/xpath-functions/array">
+                                          <member/>
+                                          <member>
+                                             <item type="array">
+                                                <array>
+                                                   <member>
+                                                      <item type="xs:integer">1</item>
+                                                   </member>
+                                                   <member>
+                                                      <item type="xs:integer">2</item>
+                                                   </member>
+                                                   <member>
+                                                      <item type="xs:integer">3</item>
+                                                   </member>
+                                                </array>
+                                             </item>
+                                          </member>
+                                          <member>
+                                             <item type="map">
+                                                <map xmlns="http://www.w3.org/2005/xpath-functions/map">
+                                                   <entry>
+                                                      <key type="xs:boolean">false</key>
+                                                      <value>
+                                                         <item type="array">
+                                                            <array xmlns="http://www.w3.org/2005/xpath-functions/array">
+                                                               <member>
+                                                                  <item type="xs:integer">6</item>
+                                                               </member>
+                                                               <member>
+                                                                  <item type="xs:integer">7</item>
+                                                                  <item type="xs:integer">8</item>
+                                                               </member>
+                                                            </array>
+                                                         </item>
+                                                      </value>
+                                                   </entry>
+                                                   <entry>
+                                                      <key type="xs:integer">4</key>
+                                                      <value>
+                                                         <item type="xs:string">four</item>
+                                                      </value>
+                                                   </entry>
+                                                   <entry>
+                                                      <key type="xs:decimal">5.5</key>
+                                                      <value>
+                                                         <item type="xs:boolean">true</item>
+                                                      </value>
+                                                   </entry>
+                                                </map>
+                                             </item>
+                                          </member>
+                                       </array>
+                                    </item>
+                                 </value>
+                              </entry>
+                           </map>
+                        </item>
+                     </member>
+                  </array>
+               </item>
+            </value>
+         </entry>
+      </map>
+   </map-1-put-own-map-entries-alongside-5-5>
 </diagnostics>

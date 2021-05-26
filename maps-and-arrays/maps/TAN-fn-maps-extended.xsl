@@ -511,10 +511,14 @@
    
    
    <xsl:function name="tan:map-put" as="map(*)" visibility="public">
-      <!-- 2-parameter function of the supporting one below, but the 2nd parameter is a map of 
-      replacements. -->
+      <!-- 4-parameter function of the complete one below. -->
+      <!-- Here the 2nd parameter is simply a map, all of whose map entries are intended 
+         insertions. This allows the user of the function to make multiple insertions at once.
+      -->
       <xsl:param name="map" as="map(*)"/>
       <xsl:param name="put-map" as="map(*)"/>
+      <xsl:param name="at-depth" as="xs:integer"/>
+      <xsl:param name="target-map-must-have-what-key" as="xs:anyAtomicType?"/>
       
       <xsl:variable name="put-map-keys" select="map:keys($put-map)"/>
       <xsl:iterate select="$put-map-keys">
@@ -522,7 +526,9 @@
          <xsl:on-completion>
             <xsl:sequence select="$map-so-far"/>
          </xsl:on-completion>
-         <xsl:variable name="new-map" select="tan:map-put($map-so-far, ., map:get($put-map, .))"/>
+         <xsl:variable name="new-map"
+            select="tan:map-put($map-so-far, ., map:get($put-map, .), $at-depth, $target-map-must-have-what-key)"
+         />
          <xsl:next-iteration>
             <xsl:with-param name="map-so-far" select="$new-map"/>
          </xsl:next-iteration>
@@ -530,56 +536,104 @@
    </xsl:function>
    
    <xsl:function name="tan:map-put" as="map(*)" visibility="public">
-      <!-- Input: a map, an atomic type representing a key, and any items, representing the value -->
-      <!-- Output: the input map, but with a new map entry. If a key exists already in the map, 
-         the new entry is placed in the first appropriate place, otherwise it is added as a topmost
-         map entry.
+      <!-- Input: a map; an atomic type representing a key for a new map entry; any items,
+         representing the value for a new map entry; an integer, specifying the depth of 
+         map to receive the entry (0 or less will apply to every map); a string, specifying
+         a key that must be present in a map that must receive the entry.
       -->
+      <!-- Output: the input map, but with a new map entry at each map of depth specified by the
+         fourth parameter, provided that it has a key specified by the fifth. --> 
+      <!-- If the fourth parameter is less than 0, then the entry will be placed throughout every
+         map: the initial map itself and any enclosed map of any depth. -->
+      <!-- If the fifth parameter is not empty, then the target map must have a map entry with 
+         an identical key for it to qualify to take the new map entry; if the parameter is empty,
+         this qualification is ignored. -->
+      <!-- If a key exists already in a target map, the new entry replaces the current one, otherwise 
+         it is added as a new map entry. -->
       <!-- This function parallels map:put(), but allows for deep placement of entries. This function
-      was written to support changing values in a map for transform(), which has submaps that might need
-      to be altered. -->
+         was written to support a more DRY-friendly approach to creating maps for transform(), which 
+         has submaps that might need to be altered and refactored, depending on various conditions. -->
+      <!-- It is presently difficult to select particular deep maps for a target action. The last two
+         parameters of this function provide a bit of control over where the action is applied. One 
+         strategy that can be adopted, to use this function better, is to supply in each map a single
+         map entry with a key corresponding to an id (perhaps via fn:generate-id()) with an empty value.
+         That empty map entry then can serve as a hook equivalent to @xml:id in an element.
+      -->
       <xsl:param name="map" as="map(*)"/>
       <xsl:param name="key" as="xs:anyAtomicType"/>
       <xsl:param name="value" as="item()*"/>
+      <xsl:param name="at-depth" as="xs:integer"/>
+      <xsl:param name="target-map-must-have-what-key" as="xs:anyAtomicType?"/>
+      
       <xsl:variable name="key-type" as="xs:string" select="tan:item-type($key)"/>
-      <!--<xsl:variable name="corresponding-entry" as="array(*)" select="map:find($map, $key)"/>-->
-      <xsl:variable name="has-entry" as="xs:boolean"
-         select="tan:map-keys($map)[tan:item-type(.) eq $key-type] = $key"/>
-      <xsl:choose>
-         <xsl:when test="$has-entry">
-            <xsl:apply-templates select="$map" mode="tan:map-put">
-               <xsl:with-param name="key" tunnel="yes" select="$key"/>
-               <xsl:with-param name="value" tunnel="yes" select="$value"/>
-            </xsl:apply-templates>
-            <!--<xsl:sequence select="tan:map-put-loop($map, $key, $value)"/>-->
-         </xsl:when>
-         <xsl:otherwise>
-            <xsl:sequence select="$map"/>
-         </xsl:otherwise>
-      </xsl:choose>
+
+      <xsl:apply-templates select="$map" mode="tan:map-put">
+         <xsl:with-param name="key" tunnel="yes" select="$key"/>
+         <xsl:with-param name="value" tunnel="yes" select="$value"/>
+         <xsl:with-param name="at-depth" tunnel="yes" select="$at-depth"/>
+         <xsl:with-param name="target-map-must-have-what-key" tunnel="yes"
+            select="$target-map-must-have-what-key"/>
+         <xsl:with-param name="current-depth" tunnel="yes" select="1"/>
+      </xsl:apply-templates>
+
    </xsl:function>
+   
    
    <xsl:mode name="tan:map-put" on-no-match="shallow-copy"/>
    
    <xsl:template match=".[. instance of map(*)]" mode="tan:map-put">
       <xsl:param name="key" tunnel="yes" as="xs:anyAtomicType"/>
       <xsl:param name="value" tunnel="yes" as="item()*"/>
-      <xsl:variable name="key-type" as="xs:string" select="tan:item-type($key)"/>
+      <xsl:param name="at-depth" tunnel="yes" as="xs:integer"/>
+      <xsl:param name="target-map-must-have-what-key" tunnel="yes" as="xs:anyAtomicType?"/>
+      <xsl:param name="current-depth" tunnel="yes" as="xs:integer"/>
+      
       <xsl:variable name="context-map" as="map(*)" select="."/>
+      <xsl:variable name="context-map-keys" as="xs:anyAtomicType*" select="map:keys(.)"/>
+      
+      <!-- In XPath, there is a construction called the predicate, marked by square brackets, which
+         filters the results of a selection. We adopt the same nomenclature here for the key that should
+         be present for a map to be eligible to receive the map entry. -->
+      <xsl:variable name="predicate-key-type" as="xs:string?" select="tan:item-type($target-map-must-have-what-key)"/>
+      <xsl:variable name="key-type" as="xs:string" select="tan:item-type($key)"/>
+      
+      <xsl:variable name="check-every-depth" as="xs:boolean" select="$at-depth lt 1"/>
+      <xsl:variable name="depth-matches" as="xs:boolean" select="$check-every-depth or $current-depth eq $at-depth"/>
+      <xsl:variable name="predicate-key-is-ok" as="xs:boolean" select="
+            not(exists($target-map-must-have-what-key))
+            or (some $i in $context-map-keys[tan:item-type(.) eq $predicate-key-type]
+               satisfies $i eq $target-map-must-have-what-key)"/>
+      
+      <xsl:variable name="put-new-entry-here" as="xs:boolean" select="$depth-matches and $predicate-key-is-ok"/>
+      <xsl:variable name="look-deeper" as="xs:boolean" select="$at-depth gt $current-depth or $check-every-depth"/>
+      
       <xsl:choose>
-         <xsl:when test="exists(.($key))">
+         <xsl:when test="$put-new-entry-here and not($look-deeper)">
+            <xsl:sequence select="map:put(., $key, $value)"/>
+         </xsl:when>
+         <xsl:when test="$put-new-entry-here">
+            <!-- Insert a new entry and keep looking -->
             <xsl:map>
                <xsl:map-entry key="$key" select="$value"/>
-               <xsl:for-each select="map:keys(.)[tan:item-type(.) ne $key-type or not(. eq $key)]">
+               <xsl:for-each select="$context-map-keys[tan:item-type(.) ne $key-type or not(. eq $key)]">
                   <xsl:map-entry key=".">
-                     <xsl:apply-templates select="$context-map(current())" mode="#current"/>
+                     <xsl:apply-templates select="$context-map(current())" mode="#current">
+                        <xsl:with-param name="current-depth" tunnel="yes" select="$current-depth + 1"/>
+                     </xsl:apply-templates>
                   </xsl:map-entry>
                </xsl:for-each>
             </xsl:map>
          </xsl:when>
+         <xsl:when test="not($put-new-entry-here) and $look-deeper">
+            <!-- Increment the depth and go on to the shallow-copy template. -->
+            <xsl:next-match>
+               <xsl:with-param name="current-depth" tunnel="yes" select="$current-depth + 1"/>
+            </xsl:next-match>
+         </xsl:when>
          <xsl:otherwise>
-            <!-- If no shallow match on the key, use the shallow-copy template -->
-            <xsl:next-match/>
+            <!-- Neither insert an entry nor look deeper, perhaps because this is the target depth, but
+               the predicate key does not match. Keep the map as-is. -->
+            <xsl:sequence select="."/>
          </xsl:otherwise>
       </xsl:choose>
    </xsl:template>

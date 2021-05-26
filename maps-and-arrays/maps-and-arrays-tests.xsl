@@ -4,12 +4,12 @@
    xmlns:array="http://www.w3.org/2005/xpath-functions/array" xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="3.0">
    
    <!-- Hello, and welcome to my XML Pantry experiments on XSLT maps and arrays. This is the
-      master template. Suggestions/criticisms are welcome, either at the XML Slack channel or 
-      directly, kalvesmaki@gmail.com -->
+      master template. Suggestions/criticisms are welcome, whether at the XML Slack channel, 
+      the GitHub account, or directly, kalvesmaki@gmail.com -->
    
    <!-- Below are some examples of input/output run against functions I am developing for 
       map and array handling, to extend the functionality of the standard XPath 3.1 map 
-      and array functions. I intend to deploy them in the next alpha version of the 
+      and array functions. I intend to deploy them in the 2021 alpha version of the 
       Text Alignment Network, http://textalign.net. The functions illustrate the utility 
       of approaching arrays and maps as invisible XML: treelike data structures. When 
       maps and arrays are shallow copied and shallow skipped like XML nodes good things 
@@ -21,6 +21,7 @@
    <!-- Primary output: experiment results -->
    <!-- Secondary output: none -->
    <!-- License: GNU General Public License, https://opensource.org/licenses/GPL-3.0 -->
+   <!-- Updated 2021-05-26 -->
    
    
    <xsl:output indent="true"/>
@@ -101,16 +102,36 @@
          <array-1-as-map><xsl:copy-of select="tan:map-to-xml(tan:array-to-map($array-1, false()))"/></array-1-as-map>
          <!-- You can toggle between maps and arrays. -->
          <map-1-to-array-back-to-map><xsl:copy-of select="tan:map-to-xml(tan:array-to-map(tan:map-to-array($map-1, false()), true()))"/></map-1-to-array-back-to-map>
-         <!-- With the shallow-copy technique, we can replace map entries deeply, even if tucked inside an array -->
-         <map-1-entry-replaced><xsl:copy-of select="tan:map-to-xml(tan:map-put($map-1, 4, 'woo hoo'))"/></map-1-entry-replaced>
          <!-- Using the shallow-copy method on maps, you can remove select entries deeply, even if enmeshed inside an array -->
          <map-remove><xsl:copy-of select="tan:map-to-xml(tan:map-remove($map-1, false()))"/></map-remove>
          
-         <!-- The points above are examples that have had practical benefit in applications
-            I am currently writing. They merely scratch the surface of what's possible,
-            in my opinion. No doubt others can do much better than I have, and I've probably
-            not anticipated certain cases where errors will be thrown. I look forward to 
-            seeing how others approach these and related tasks.
+         <!-- map:put() alternatives -->
+         <!-- So you want to put one or more map entries deeply into a target map? The standard map:put() 
+            is primed only for top-level placements. But the shallow-copy technique, plus a couple of select
+            parameters to determine where to make the placement, allows targeted placements.
+         -->
+         <!-- In this example, we put the new map entry not only into the topmost map, but in every descendant
+            map. -->
+         <map-1-put-entry-everywhere><xsl:copy-of select="tan:map-to-xml(tan:map-put($map-1, 4, 'woo hoo', 0, ()))"/></map-1-put-entry-everywhere>
+         <!-- Now we put the new map entry only in the map of depth 2. -->
+         <map-1-put-entry-at-depth-2><xsl:copy-of select="tan:map-to-xml(tan:map-put($map-1, 4, 'woo hoo', 2, ()))"/></map-1-put-entry-at-depth-2>
+         <!-- Now we put the new map entry only in a map that has a key of the current date and time, at whatever depth. -->
+         <map-1-put-entry-alongside-current-dateTime><xsl:copy-of select="tan:map-to-xml(tan:map-put($map-1, 4, 'woo hoo', 0, current-dateTime()))"/></map-1-put-entry-alongside-current-dateTime>
+         <!-- If we specify a depth and key that doesn't exist, nothing happens. -->
+         <map-1-put-entry-at-depth-2-alongside-current-dateTime><xsl:copy-of select="tan:map-to-xml(tan:map-put($map-1, 4, 'woo hoo', 2, current-dateTime()))"/></map-1-put-entry-at-depth-2-alongside-current-dateTime>
+         <!-- There is a four-arity version of the function that lets us insert at one go all the map entries
+            in a specified map. Here we insert the map inside itself, targeting any map that has a key of 5.5.
+            In this example, inserting a map of depth 2 at depth 2 results in a map of depth 3. Note also that
+            the level-2 map will have its entry with key 4 replaced. -->
+         <map-1-put-own-map-entries-alongside-5-5><xsl:copy-of select="tan:map-to-xml(tan:map-put($map-1, $map-1, 0, 5.5))"/></map-1-put-own-map-entries-alongside-5-5>
+         
+         
+         <!-- The examples above illustrate practical benefits I've gotten from incorporating
+            these extended map functions in XSLT applications I've been writing. They merely 
+            scratch the surface of what's possible, in my opinion. No doubt others can do much 
+            better than I have, and I've probably not anticipated certain cases where errors 
+            will be thrown. Let the examples above, and the function library itself, catalyze 
+            your own ideas.
          -->
          
          
