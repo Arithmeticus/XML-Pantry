@@ -21,49 +21,43 @@
    
    
    <!-- The following static parameter is meant to provide an approximation of how a processor, in optimization, might
-      ensure that the master map underlying the function gets only what is needed. -->
-   <xsl:param name="codepoints-of-interest" static="yes" as="xs:integer*"
-      select="1 to 127"/>
-   
+      reduce the underlying master map to only what is needed. -->
+   <xsl:param name="codepoints-of-interest" static="yes" as="xs:integer*" select="1 to 127"/>
+   <!-- 
+      
+      FUNCTION PROTOTYPE
+      
+   -->
    <xsl:function name="fn4:unicode-properties" visibility="public" as="map(*)?" cache="yes">
-      <!-- Input: any positive integer or a string. If a positive integer, it represents the decimal value
-         of a Unicode codepoint. If a string, it represents a property. -->
-      <!-- Output: a map. If the input is a positive integer, the result is a map each of whose entries 
-         consists of a string key identifying a unicode property and and a typed value specifying the value 
-         of that property for the given codepoint.
-            If the input is a string, the result is a map each of whose entries consists of a 
-         key that is a typed possible value for that property and a value that consists of a sequence of codepoints
-         corresponding to that value.
+      <!-- Input: any integer, representing the decimal value of a Unicode codepoint. -->
+      <!-- Output: a map, each of whose entries consists of a string key identifying a unicode property and 
+         a typed value specifying the value of that property for the given codepoint.
       -->
       <!-- This function is currently designed to model how an XPath 4.0 function might work. -->
-      <xsl:param name="codepoint-or-property" as="item()"/>
+      <xsl:param name="codepoint" as="xs:integer"/>
       
       <xsl:choose>
-         <xsl:when test="$codepoint-or-property instance of xs:integer and $codepoint-or-property = $fn4:unicode-property-map-codepoint-keys">
-            <xsl:variable name="curr-map" select="$fn4:unicode-property-map($codepoint-or-property)"/>
+         <xsl:when test="$codepoint = $fn4:unicode-property-map-codepoint-keys">
+            <xsl:variable name="curr-map" select="$fn4:unicode-property-map($codepoint)"/>
             
             <!-- When you get back a map, you should be able to retrieve a property given its short or long values. If you ask for a property 
                name that doesn't exist in Unicode, then you should get an error. Otherwise you should get the null value of the property is 
                ignorable. Otherwise you should get the property itself. -->
             <xsl:apply-templates select="$fn4:property-tree" mode="expand-map">
                <xsl:with-param name="curr-map" tunnel="yes" select="$curr-map"/>
-               <xsl:with-param name="curr-cp" tunnel="yes" select="$codepoint-or-property"/>
+               <xsl:with-param name="curr-cp" tunnel="yes" select="$codepoint"/>
             </xsl:apply-templates>
          </xsl:when>
-         <xsl:when test="$codepoint-or-property instance of xs:integer">
-            <xsl:message>Codepoint {$codepoint-or-property} not in master map.</xsl:message>
+         <xsl:when test="$codepoint instance of xs:integer">
+            <xsl:message>Codepoint {$codepoint} not in master map.</xsl:message>
          </xsl:when>
-         <xsl:when test="$codepoint-or-property instance of xs:string">
-            <xsl:message>Property maps not yet implemented.</xsl:message>
-         </xsl:when>
-         <xsl:otherwise>
-            <xsl:message>Input type not supported.</xsl:message>
-         </xsl:otherwise>
       </xsl:choose>
       
       
    </xsl:function>
-   
+   <!-- The following variable memoizes all Unicode codepoint properties. For each property there is provided aliases, type, 
+      and sometimes possible values. The variable exists mainly to help build and rebuild this stylesheet, because the 
+      information is an important starting point to the build process, and it is somewhat time-consuming to assemble. -->
    <xsl:variable name="fn4:property-tree" as="element()">
       <property-tree xmlns:tan="tag:textalign.net,2015:ns">
          <property>
@@ -2059,7 +2053,8 @@
          </property>
       </property-tree>
    </xsl:variable>
-   
+   <!-- When a core map is delivered, it has only a few of the uncommon values present. We expand to all aliases and
+      populate missing items with their most frequent value. -->
    <xsl:mode name="expand-map" on-no-match="shallow-skip"/>
    
    <xsl:template match="property-tree" mode="expand-map">
@@ -2093,7 +2088,7 @@
                <xsl:sequence select="$curr-cp"/>
             </xsl:when>
             <!-- Currently we can ignore integer and string, because they are currently available
-               only as zero or more. -->
+               only as zero or more, which means the default is null. -->
          </xsl:choose>
       </xsl:variable>
       
@@ -2114,45 +2109,32 @@
             else
                $default-val"/>
    </xsl:template>
+   <!-- 
    
-   <xsl:variable name="fn4:unicode-property-map-codepoint-keys" as="xs:integer+"
+         MASTER MAP
+   
+   -->
+   <xsl:variable name="fn4:unicode-property-map-codepoint-keys" as="xs:integer*"
       select="map:keys($fn4:unicode-property-map)[. instance of xs:integer]"/>
    <xsl:variable name="fn4:unicode-property-map" as="map(*)">
       <xsl:map>
-         <xsl:map-entry key="9" select="$fn4:cp-submap1"/>
-         <xsl:map-entry key="10" select="$fn4:cp-submap2"/>
-         <xsl:map-entry key="'bc'" select="$fn4:prop-bc-submap"/>
-         <xsl:map-entry key="'Bidi_Class'" select="$fn4:prop-bc-submap"/>
-         <xsl:map-entry key="'lb'" select="$fn4:prop-lb-submap"/>
-         <xsl:map-entry key="'Line_Break'" select="$fn4:prop-lb-submap"/>
+         <xsl:map-entry use-when="$codepoints-of-interest = 33" key="33">
+            <!-- This is a sample entry of what will get built. -->
+            <xsl:map>
+               <xsl:map-entry key="'bc'" select="'ON'"/>
+               <xsl:map-entry key="'dt'" select="'None'"/>
+               <xsl:map-entry key="'gc'" select="'Po'"/>
+               <xsl:map-entry key="'lb'" select="'EX'"/>
+               <xsl:map-entry key="'na'" select="'EXCLAMATION MARK'"/>
+               <xsl:map-entry key="'Pat_Syn'" select="true()"/>
+               <xsl:map-entry key="'SB'" select="'ST'"/>
+               <xsl:map-entry key="'scx'" select="'Zyyy'"/>
+               <xsl:map-entry key="'STerm'" select="true()"/>
+               <xsl:map-entry key="'Term'" select="true()"/>
+            </xsl:map>
+         </xsl:map-entry>
       </xsl:map>
    </xsl:variable>
    
-   <xsl:variable name="fn4:cp-submap1" as="map(*)">
-      <xsl:map>
-         <xsl:map-entry key="'bc'" select="'S'"/>
-         <xsl:map-entry key="'lb'" select="'BA'"/>
-      </xsl:map>
-   </xsl:variable>
-   <xsl:variable name="fn4:cp-submap2" as="map(*)">
-      <xsl:map>
-         <xsl:map-entry key="'bc'" select="'B'"/>
-         <xsl:map-entry key="'lb'" select="'LF'"/>
-      </xsl:map>
-   </xsl:variable>
-   
-   <xsl:variable name="fn4:prop-bc-submap" as="map(*)">
-      <xsl:map>
-         <xsl:map-entry key="'B'" select="10"/>
-         <xsl:map-entry key="'S'" select="9"/>
-      </xsl:map>
-   </xsl:variable>
-   
-   <xsl:variable name="fn4:prop-lb-submap" as="map(*)">
-      <xsl:map>
-         <xsl:map-entry key="'BA'" select="9"/>
-         <xsl:map-entry key="'LF'" select="10"/>
-      </xsl:map>
-   </xsl:variable>
    
 </xsl:stylesheet>

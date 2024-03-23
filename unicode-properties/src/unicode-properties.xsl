@@ -21,49 +21,45 @@
    
    
    <!-- The following static parameter is meant to provide an approximation of how a processor, in optimization, might
-      ensure that the master map underlying the function gets only what is needed. -->
+      reduce the underlying master map to only what is needed. -->
    <xsl:param name="codepoints-of-interest"
               static="yes"
               as="xs:integer*"
               select="1 to 127"/>
+   <!-- 
+      
+      FUNCTION PROTOTYPE
+      
+   -->
    <xsl:function name="fn4:unicode-properties"
                  visibility="public"
                  as="map(*)?"
                  cache="yes">
-      <!-- Input: any positive integer or a string. If a positive integer, it represents the decimal value
-         of a Unicode codepoint. If a string, it represents a property. -->
-      <!-- Output: a map. If the input is a positive integer, the result is a map each of whose entries 
-         consists of a string key identifying a unicode property and and a typed value specifying the value 
-         of that property for the given codepoint.
-            If the input is a string, the result is a map each of whose entries consists of a 
-         key that is a typed possible value for that property and a value that consists of a sequence of codepoints
-         corresponding to that value.
+      <!-- Input: any integer, representing the decimal value of a Unicode codepoint. -->
+      <!-- Output: a map, each of whose entries consists of a string key identifying a unicode property and 
+         a typed value specifying the value of that property for the given codepoint.
       -->
       <!-- This function is currently designed to model how an XPath 4.0 function might work. -->
-      <xsl:param name="codepoint-or-property" as="item()"/>
+      <xsl:param name="codepoint" as="xs:integer"/>
       <xsl:choose>
-         <xsl:when test="$codepoint-or-property instance of xs:integer and $codepoint-or-property = $fn4:unicode-property-map-codepoint-keys">
-            <xsl:variable name="curr-map"
-                          select="$fn4:unicode-property-map($codepoint-or-property)"/>
+         <xsl:when test="$codepoint = $fn4:unicode-property-map-codepoint-keys">
+            <xsl:variable name="curr-map" select="$fn4:unicode-property-map($codepoint)"/>
             <!-- When you get back a map, you should be able to retrieve a property given its short or long values. If you ask for a property 
                name that doesn't exist in Unicode, then you should get an error. Otherwise you should get the null value of the property is 
                ignorable. Otherwise you should get the property itself. -->
             <xsl:apply-templates select="$fn4:property-tree" mode="expand-map">
                <xsl:with-param name="curr-map" tunnel="yes" select="$curr-map"/>
-               <xsl:with-param name="curr-cp" tunnel="yes" select="$codepoint-or-property"/>
+               <xsl:with-param name="curr-cp" tunnel="yes" select="$codepoint"/>
             </xsl:apply-templates>
          </xsl:when>
-         <xsl:when test="$codepoint-or-property instance of xs:integer">
-            <xsl:message>Codepoint {$codepoint-or-property} not in master map.</xsl:message>
+         <xsl:when test="$codepoint instance of xs:integer">
+            <xsl:message>Codepoint {$codepoint} not in master map.</xsl:message>
          </xsl:when>
-         <xsl:when test="$codepoint-or-property instance of xs:string">
-            <xsl:message>Property maps not yet implemented.</xsl:message>
-         </xsl:when>
-         <xsl:otherwise>
-            <xsl:message>Input type not supported.</xsl:message>
-         </xsl:otherwise>
       </xsl:choose>
    </xsl:function>
+   <!-- The following variable memoizes all Unicode codepoint properties. For each property there is provided aliases, type, 
+      and sometimes possible values. The variable exists mainly to help build and rebuild this stylesheet, because the 
+      information is an important starting point to the build process, and it is somewhat time-consuming to assemble. -->
    <xsl:variable name="fn4:property-tree" as="element()">
       <property-tree xmlns:tan="tag:textalign.net,2015:ns">
          <property>
@@ -2059,6 +2055,8 @@
          </property>
       </property-tree>
    </xsl:variable>
+   <!-- When a core map is delivered, it has only a few of the uncommon values present. We expand to all aliases and
+      populate missing items with their most frequent value. -->
    <xsl:mode name="expand-map" on-no-match="shallow-skip"/>
    <xsl:template match="property-tree" mode="expand-map">
       <xsl:map>
@@ -2091,7 +2089,7 @@
                <xsl:sequence select="$curr-cp"/>
             </xsl:when>
             <!-- Currently we can ignore integer and string, because they are currently available
-               only as zero or more. -->
+               only as zero or more, which means the default is null. -->
          </xsl:choose>
       </xsl:variable>
       <xsl:apply-templates mode="#current">
@@ -2108,8 +2106,13 @@
       <xsl:map-entry key="."
                      select="             if (exists($curr-map-key-of-interest)) then                $curr-map($curr-map-key-of-interest)             else                $default-val"/>
    </xsl:template>
+   <!-- 
+   
+         MASTER MAP
+   
+   -->
    <xsl:variable name="fn4:unicode-property-map-codepoint-keys"
-                 as="xs:integer+"
+                 as="xs:integer*"
                  select="map:keys($fn4:unicode-property-map)[. instance of xs:integer]"/>
    <xsl:variable name="fn4:unicode-property-map" as="map(*)">
       <xsl:map>
@@ -2369,7 +2372,10 @@
             <xsl:map>
                <xsl:map-entry key="'bc'" select="'WS'"/>
                <xsl:map-entry key="'dt'" select="'None'"/>
+               <xsl:map-entry key="'ea'" select="'Na'"/>
                <xsl:map-entry key="'gc'" select="'Zs'"/>
+               <xsl:map-entry key="'GCB'" select="'XX'"/>
+               <xsl:map-entry key="'Gr_Base'" select="true()"/>
                <xsl:map-entry key="'lb'" select="'SP'"/>
                <xsl:map-entry key="'na'" select="'SPACE'"/>
                <xsl:map-entry key="'Pat_WS'" select="true()"/>
@@ -2383,7 +2389,10 @@
             <xsl:map>
                <xsl:map-entry key="'bc'" select="'ON'"/>
                <xsl:map-entry key="'dt'" select="'None'"/>
+               <xsl:map-entry key="'ea'" select="'Na'"/>
                <xsl:map-entry key="'gc'" select="'Po'"/>
+               <xsl:map-entry key="'GCB'" select="'XX'"/>
+               <xsl:map-entry key="'Gr_Base'" select="true()"/>
                <xsl:map-entry key="'lb'" select="'EX'"/>
                <xsl:map-entry key="'na'" select="'EXCLAMATION MARK'"/>
                <xsl:map-entry key="'Pat_Syn'" select="true()"/>
@@ -2397,7 +2406,10 @@
             <xsl:map>
                <xsl:map-entry key="'bc'" select="'ON'"/>
                <xsl:map-entry key="'dt'" select="'None'"/>
+               <xsl:map-entry key="'ea'" select="'Na'"/>
                <xsl:map-entry key="'gc'" select="'Po'"/>
+               <xsl:map-entry key="'GCB'" select="'XX'"/>
+               <xsl:map-entry key="'Gr_Base'" select="true()"/>
                <xsl:map-entry key="'lb'" select="'QU'"/>
                <xsl:map-entry key="'na'" select="'QUOTATION MARK'"/>
                <xsl:map-entry key="'Pat_Syn'" select="true()"/>
@@ -2411,9 +2423,13 @@
             <xsl:map>
                <xsl:map-entry key="'bc'" select="'ET'"/>
                <xsl:map-entry key="'dt'" select="'None'"/>
+               <xsl:map-entry key="'ea'" select="'Na'"/>
                <xsl:map-entry key="'EComp'" select="true()"/>
                <xsl:map-entry key="'Emoji'" select="true()"/>
                <xsl:map-entry key="'gc'" select="'Po'"/>
+               <xsl:map-entry key="'GCB'" select="'XX'"/>
+               <xsl:map-entry key="'Gr_Base'" select="true()"/>
+               <xsl:map-entry key="'lb'" select="'AL'"/>
                <xsl:map-entry key="'na'" select="'NUMBER SIGN'"/>
                <xsl:map-entry key="'Pat_Syn'" select="true()"/>
                <xsl:map-entry key="'scx'" select="'Zyyy'"/>
@@ -2423,7 +2439,10 @@
             <xsl:map>
                <xsl:map-entry key="'bc'" select="'ET'"/>
                <xsl:map-entry key="'dt'" select="'None'"/>
+               <xsl:map-entry key="'ea'" select="'Na'"/>
                <xsl:map-entry key="'gc'" select="'Sc'"/>
+               <xsl:map-entry key="'GCB'" select="'XX'"/>
+               <xsl:map-entry key="'Gr_Base'" select="true()"/>
                <xsl:map-entry key="'lb'" select="'PR'"/>
                <xsl:map-entry key="'na'" select="'DOLLAR SIGN'"/>
                <xsl:map-entry key="'Pat_Syn'" select="true()"/>
@@ -2434,7 +2453,10 @@
             <xsl:map>
                <xsl:map-entry key="'bc'" select="'ET'"/>
                <xsl:map-entry key="'dt'" select="'None'"/>
+               <xsl:map-entry key="'ea'" select="'Na'"/>
                <xsl:map-entry key="'gc'" select="'Po'"/>
+               <xsl:map-entry key="'GCB'" select="'XX'"/>
+               <xsl:map-entry key="'Gr_Base'" select="true()"/>
                <xsl:map-entry key="'lb'" select="'PO'"/>
                <xsl:map-entry key="'na'" select="'PERCENT SIGN'"/>
                <xsl:map-entry key="'Pat_Syn'" select="true()"/>
@@ -2445,7 +2467,11 @@
             <xsl:map>
                <xsl:map-entry key="'bc'" select="'ON'"/>
                <xsl:map-entry key="'dt'" select="'None'"/>
+               <xsl:map-entry key="'ea'" select="'Na'"/>
                <xsl:map-entry key="'gc'" select="'Po'"/>
+               <xsl:map-entry key="'GCB'" select="'XX'"/>
+               <xsl:map-entry key="'Gr_Base'" select="true()"/>
+               <xsl:map-entry key="'lb'" select="'AL'"/>
                <xsl:map-entry key="'na'" select="'AMPERSAND'"/>
                <xsl:map-entry key="'Pat_Syn'" select="true()"/>
                <xsl:map-entry key="'scx'" select="'Zyyy'"/>
@@ -2456,7 +2482,10 @@
                <xsl:map-entry key="'bc'" select="'ON'"/>
                <xsl:map-entry key="'CI'" select="true()"/>
                <xsl:map-entry key="'dt'" select="'None'"/>
+               <xsl:map-entry key="'ea'" select="'Na'"/>
                <xsl:map-entry key="'gc'" select="'Po'"/>
+               <xsl:map-entry key="'GCB'" select="'XX'"/>
+               <xsl:map-entry key="'Gr_Base'" select="true()"/>
                <xsl:map-entry key="'lb'" select="'QU'"/>
                <xsl:map-entry key="'na'" select="'APOSTROPHE'"/>
                <xsl:map-entry key="'na1'" select="'APOSTROPHE-QUOTE'"/>
@@ -2475,7 +2504,10 @@
                <xsl:map-entry key="'bpb'" select="41"/>
                <xsl:map-entry key="'bpt'" select="'o'"/>
                <xsl:map-entry key="'dt'" select="'None'"/>
+               <xsl:map-entry key="'ea'" select="'Na'"/>
                <xsl:map-entry key="'gc'" select="'Ps'"/>
+               <xsl:map-entry key="'GCB'" select="'XX'"/>
+               <xsl:map-entry key="'Gr_Base'" select="true()"/>
                <xsl:map-entry key="'lb'" select="'OP'"/>
                <xsl:map-entry key="'na'" select="'LEFT PARENTHESIS'"/>
                <xsl:map-entry key="'na1'" select="'OPENING PARENTHESIS'"/>
@@ -2492,7 +2524,10 @@
                <xsl:map-entry key="'bpb'" select="40"/>
                <xsl:map-entry key="'bpt'" select="'c'"/>
                <xsl:map-entry key="'dt'" select="'None'"/>
+               <xsl:map-entry key="'ea'" select="'Na'"/>
                <xsl:map-entry key="'gc'" select="'Pe'"/>
+               <xsl:map-entry key="'GCB'" select="'XX'"/>
+               <xsl:map-entry key="'Gr_Base'" select="true()"/>
                <xsl:map-entry key="'lb'" select="'CP'"/>
                <xsl:map-entry key="'na'" select="'RIGHT PARENTHESIS'"/>
                <xsl:map-entry key="'na1'" select="'CLOSING PARENTHESIS'"/>
@@ -2505,9 +2540,13 @@
             <xsl:map>
                <xsl:map-entry key="'bc'" select="'ON'"/>
                <xsl:map-entry key="'dt'" select="'None'"/>
+               <xsl:map-entry key="'ea'" select="'Na'"/>
                <xsl:map-entry key="'EComp'" select="true()"/>
                <xsl:map-entry key="'Emoji'" select="true()"/>
                <xsl:map-entry key="'gc'" select="'Po'"/>
+               <xsl:map-entry key="'GCB'" select="'XX'"/>
+               <xsl:map-entry key="'Gr_Base'" select="true()"/>
+               <xsl:map-entry key="'lb'" select="'AL'"/>
                <xsl:map-entry key="'na'" select="'ASTERISK'"/>
                <xsl:map-entry key="'Pat_Syn'" select="true()"/>
                <xsl:map-entry key="'scx'" select="'Zyyy'"/>
@@ -2517,7 +2556,10 @@
             <xsl:map>
                <xsl:map-entry key="'bc'" select="'ES'"/>
                <xsl:map-entry key="'dt'" select="'None'"/>
+               <xsl:map-entry key="'ea'" select="'Na'"/>
                <xsl:map-entry key="'gc'" select="'Sm'"/>
+               <xsl:map-entry key="'GCB'" select="'XX'"/>
+               <xsl:map-entry key="'Gr_Base'" select="true()"/>
                <xsl:map-entry key="'lb'" select="'PR'"/>
                <xsl:map-entry key="'Math'" select="true()"/>
                <xsl:map-entry key="'na'" select="'PLUS SIGN'"/>
@@ -2529,7 +2571,10 @@
             <xsl:map>
                <xsl:map-entry key="'bc'" select="'CS'"/>
                <xsl:map-entry key="'dt'" select="'None'"/>
+               <xsl:map-entry key="'ea'" select="'Na'"/>
                <xsl:map-entry key="'gc'" select="'Po'"/>
+               <xsl:map-entry key="'GCB'" select="'XX'"/>
+               <xsl:map-entry key="'Gr_Base'" select="true()"/>
                <xsl:map-entry key="'lb'" select="'IS'"/>
                <xsl:map-entry key="'na'" select="'COMMA'"/>
                <xsl:map-entry key="'Pat_Syn'" select="true()"/>
@@ -2544,7 +2589,10 @@
                <xsl:map-entry key="'bc'" select="'ES'"/>
                <xsl:map-entry key="'Dash'" select="true()"/>
                <xsl:map-entry key="'dt'" select="'None'"/>
+               <xsl:map-entry key="'ea'" select="'Na'"/>
                <xsl:map-entry key="'gc'" select="'Pd'"/>
+               <xsl:map-entry key="'GCB'" select="'XX'"/>
+               <xsl:map-entry key="'Gr_Base'" select="true()"/>
                <xsl:map-entry key="'InSC'" select="'Consonant_Placeholder'"/>
                <xsl:map-entry key="'lb'" select="'HY'"/>
                <xsl:map-entry key="'na'" select="'HYPHEN-MINUS'"/>
@@ -2558,7 +2606,10 @@
                <xsl:map-entry key="'bc'" select="'CS'"/>
                <xsl:map-entry key="'CI'" select="true()"/>
                <xsl:map-entry key="'dt'" select="'None'"/>
+               <xsl:map-entry key="'ea'" select="'Na'"/>
                <xsl:map-entry key="'gc'" select="'Po'"/>
+               <xsl:map-entry key="'GCB'" select="'XX'"/>
+               <xsl:map-entry key="'Gr_Base'" select="true()"/>
                <xsl:map-entry key="'lb'" select="'IS'"/>
                <xsl:map-entry key="'na'" select="'FULL STOP'"/>
                <xsl:map-entry key="'na1'" select="'PERIOD'"/>
@@ -2574,7 +2625,10 @@
             <xsl:map>
                <xsl:map-entry key="'bc'" select="'CS'"/>
                <xsl:map-entry key="'dt'" select="'None'"/>
+               <xsl:map-entry key="'ea'" select="'Na'"/>
                <xsl:map-entry key="'gc'" select="'Po'"/>
+               <xsl:map-entry key="'GCB'" select="'XX'"/>
+               <xsl:map-entry key="'Gr_Base'" select="true()"/>
                <xsl:map-entry key="'lb'" select="'SY'"/>
                <xsl:map-entry key="'na'" select="'SOLIDUS'"/>
                <xsl:map-entry key="'na1'" select="'SLASH'"/>
@@ -2587,10 +2641,14 @@
                <xsl:map-entry key="'AHex'" select="true()"/>
                <xsl:map-entry key="'bc'" select="'EN'"/>
                <xsl:map-entry key="'dt'" select="'None'"/>
+               <xsl:map-entry key="'ea'" select="'Na'"/>
                <xsl:map-entry key="'EComp'" select="true()"/>
                <xsl:map-entry key="'Emoji'" select="true()"/>
                <xsl:map-entry key="'gc'" select="'Nd'"/>
+               <xsl:map-entry key="'GCB'" select="'XX'"/>
+               <xsl:map-entry key="'Gr_Base'" select="true()"/>
                <xsl:map-entry key="'Hex'" select="true()"/>
+               <xsl:map-entry key="'IDC'" select="true()"/>
                <xsl:map-entry key="'InSC'" select="'Number'"/>
                <xsl:map-entry key="'lb'" select="'NU'"/>
                <xsl:map-entry key="'na'" select="'DIGIT ZERO'"/>
@@ -2599,6 +2657,7 @@
                <xsl:map-entry key="'SB'" select="'NU'"/>
                <xsl:map-entry key="'scx'" select="'Zyyy'"/>
                <xsl:map-entry key="'WB'" select="'NU'"/>
+               <xsl:map-entry key="'XIDC'" select="true()"/>
             </xsl:map>
          </xsl:map-entry>
          <xsl:map-entry use-when="$codepoints-of-interest = 49" key="49">
@@ -2606,10 +2665,14 @@
                <xsl:map-entry key="'AHex'" select="true()"/>
                <xsl:map-entry key="'bc'" select="'EN'"/>
                <xsl:map-entry key="'dt'" select="'None'"/>
+               <xsl:map-entry key="'ea'" select="'Na'"/>
                <xsl:map-entry key="'EComp'" select="true()"/>
                <xsl:map-entry key="'Emoji'" select="true()"/>
                <xsl:map-entry key="'gc'" select="'Nd'"/>
+               <xsl:map-entry key="'GCB'" select="'XX'"/>
+               <xsl:map-entry key="'Gr_Base'" select="true()"/>
                <xsl:map-entry key="'Hex'" select="true()"/>
+               <xsl:map-entry key="'IDC'" select="true()"/>
                <xsl:map-entry key="'InSC'" select="'Number'"/>
                <xsl:map-entry key="'lb'" select="'NU'"/>
                <xsl:map-entry key="'na'" select="'DIGIT ONE'"/>
@@ -2618,6 +2681,7 @@
                <xsl:map-entry key="'SB'" select="'NU'"/>
                <xsl:map-entry key="'scx'" select="'Zyyy'"/>
                <xsl:map-entry key="'WB'" select="'NU'"/>
+               <xsl:map-entry key="'XIDC'" select="true()"/>
             </xsl:map>
          </xsl:map-entry>
          <xsl:map-entry use-when="$codepoints-of-interest = 50" key="50">
@@ -2625,10 +2689,14 @@
                <xsl:map-entry key="'AHex'" select="true()"/>
                <xsl:map-entry key="'bc'" select="'EN'"/>
                <xsl:map-entry key="'dt'" select="'None'"/>
+               <xsl:map-entry key="'ea'" select="'Na'"/>
                <xsl:map-entry key="'EComp'" select="true()"/>
                <xsl:map-entry key="'Emoji'" select="true()"/>
                <xsl:map-entry key="'gc'" select="'Nd'"/>
+               <xsl:map-entry key="'GCB'" select="'XX'"/>
+               <xsl:map-entry key="'Gr_Base'" select="true()"/>
                <xsl:map-entry key="'Hex'" select="true()"/>
+               <xsl:map-entry key="'IDC'" select="true()"/>
                <xsl:map-entry key="'InSC'" select="'Number'"/>
                <xsl:map-entry key="'lb'" select="'NU'"/>
                <xsl:map-entry key="'na'" select="'DIGIT TWO'"/>
@@ -2637,6 +2705,7 @@
                <xsl:map-entry key="'SB'" select="'NU'"/>
                <xsl:map-entry key="'scx'" select="'Zyyy'"/>
                <xsl:map-entry key="'WB'" select="'NU'"/>
+               <xsl:map-entry key="'XIDC'" select="true()"/>
             </xsl:map>
          </xsl:map-entry>
          <xsl:map-entry use-when="$codepoints-of-interest = 51" key="51">
@@ -2644,10 +2713,14 @@
                <xsl:map-entry key="'AHex'" select="true()"/>
                <xsl:map-entry key="'bc'" select="'EN'"/>
                <xsl:map-entry key="'dt'" select="'None'"/>
+               <xsl:map-entry key="'ea'" select="'Na'"/>
                <xsl:map-entry key="'EComp'" select="true()"/>
                <xsl:map-entry key="'Emoji'" select="true()"/>
                <xsl:map-entry key="'gc'" select="'Nd'"/>
+               <xsl:map-entry key="'GCB'" select="'XX'"/>
+               <xsl:map-entry key="'Gr_Base'" select="true()"/>
                <xsl:map-entry key="'Hex'" select="true()"/>
+               <xsl:map-entry key="'IDC'" select="true()"/>
                <xsl:map-entry key="'InSC'" select="'Number'"/>
                <xsl:map-entry key="'lb'" select="'NU'"/>
                <xsl:map-entry key="'na'" select="'DIGIT THREE'"/>
@@ -2656,6 +2729,7 @@
                <xsl:map-entry key="'SB'" select="'NU'"/>
                <xsl:map-entry key="'scx'" select="'Zyyy'"/>
                <xsl:map-entry key="'WB'" select="'NU'"/>
+               <xsl:map-entry key="'XIDC'" select="true()"/>
             </xsl:map>
          </xsl:map-entry>
          <xsl:map-entry use-when="$codepoints-of-interest = 52" key="52">
@@ -2663,10 +2737,14 @@
                <xsl:map-entry key="'AHex'" select="true()"/>
                <xsl:map-entry key="'bc'" select="'EN'"/>
                <xsl:map-entry key="'dt'" select="'None'"/>
+               <xsl:map-entry key="'ea'" select="'Na'"/>
                <xsl:map-entry key="'EComp'" select="true()"/>
                <xsl:map-entry key="'Emoji'" select="true()"/>
                <xsl:map-entry key="'gc'" select="'Nd'"/>
+               <xsl:map-entry key="'GCB'" select="'XX'"/>
+               <xsl:map-entry key="'Gr_Base'" select="true()"/>
                <xsl:map-entry key="'Hex'" select="true()"/>
+               <xsl:map-entry key="'IDC'" select="true()"/>
                <xsl:map-entry key="'InSC'" select="'Number'"/>
                <xsl:map-entry key="'lb'" select="'NU'"/>
                <xsl:map-entry key="'na'" select="'DIGIT FOUR'"/>
@@ -2675,6 +2753,7 @@
                <xsl:map-entry key="'SB'" select="'NU'"/>
                <xsl:map-entry key="'scx'" select="'Zyyy'"/>
                <xsl:map-entry key="'WB'" select="'NU'"/>
+               <xsl:map-entry key="'XIDC'" select="true()"/>
             </xsl:map>
          </xsl:map-entry>
          <xsl:map-entry use-when="$codepoints-of-interest = 53" key="53">
@@ -2682,10 +2761,14 @@
                <xsl:map-entry key="'AHex'" select="true()"/>
                <xsl:map-entry key="'bc'" select="'EN'"/>
                <xsl:map-entry key="'dt'" select="'None'"/>
+               <xsl:map-entry key="'ea'" select="'Na'"/>
                <xsl:map-entry key="'EComp'" select="true()"/>
                <xsl:map-entry key="'Emoji'" select="true()"/>
                <xsl:map-entry key="'gc'" select="'Nd'"/>
+               <xsl:map-entry key="'GCB'" select="'XX'"/>
+               <xsl:map-entry key="'Gr_Base'" select="true()"/>
                <xsl:map-entry key="'Hex'" select="true()"/>
+               <xsl:map-entry key="'IDC'" select="true()"/>
                <xsl:map-entry key="'InSC'" select="'Number'"/>
                <xsl:map-entry key="'lb'" select="'NU'"/>
                <xsl:map-entry key="'na'" select="'DIGIT FIVE'"/>
@@ -2694,6 +2777,7 @@
                <xsl:map-entry key="'SB'" select="'NU'"/>
                <xsl:map-entry key="'scx'" select="'Zyyy'"/>
                <xsl:map-entry key="'WB'" select="'NU'"/>
+               <xsl:map-entry key="'XIDC'" select="true()"/>
             </xsl:map>
          </xsl:map-entry>
          <xsl:map-entry use-when="$codepoints-of-interest = 54" key="54">
@@ -2701,10 +2785,14 @@
                <xsl:map-entry key="'AHex'" select="true()"/>
                <xsl:map-entry key="'bc'" select="'EN'"/>
                <xsl:map-entry key="'dt'" select="'None'"/>
+               <xsl:map-entry key="'ea'" select="'Na'"/>
                <xsl:map-entry key="'EComp'" select="true()"/>
                <xsl:map-entry key="'Emoji'" select="true()"/>
                <xsl:map-entry key="'gc'" select="'Nd'"/>
+               <xsl:map-entry key="'GCB'" select="'XX'"/>
+               <xsl:map-entry key="'Gr_Base'" select="true()"/>
                <xsl:map-entry key="'Hex'" select="true()"/>
+               <xsl:map-entry key="'IDC'" select="true()"/>
                <xsl:map-entry key="'InSC'" select="'Number'"/>
                <xsl:map-entry key="'lb'" select="'NU'"/>
                <xsl:map-entry key="'na'" select="'DIGIT SIX'"/>
@@ -2713,6 +2801,7 @@
                <xsl:map-entry key="'SB'" select="'NU'"/>
                <xsl:map-entry key="'scx'" select="'Zyyy'"/>
                <xsl:map-entry key="'WB'" select="'NU'"/>
+               <xsl:map-entry key="'XIDC'" select="true()"/>
             </xsl:map>
          </xsl:map-entry>
          <xsl:map-entry use-when="$codepoints-of-interest = 55" key="55">
@@ -2720,10 +2809,14 @@
                <xsl:map-entry key="'AHex'" select="true()"/>
                <xsl:map-entry key="'bc'" select="'EN'"/>
                <xsl:map-entry key="'dt'" select="'None'"/>
+               <xsl:map-entry key="'ea'" select="'Na'"/>
                <xsl:map-entry key="'EComp'" select="true()"/>
                <xsl:map-entry key="'Emoji'" select="true()"/>
                <xsl:map-entry key="'gc'" select="'Nd'"/>
+               <xsl:map-entry key="'GCB'" select="'XX'"/>
+               <xsl:map-entry key="'Gr_Base'" select="true()"/>
                <xsl:map-entry key="'Hex'" select="true()"/>
+               <xsl:map-entry key="'IDC'" select="true()"/>
                <xsl:map-entry key="'InSC'" select="'Number'"/>
                <xsl:map-entry key="'lb'" select="'NU'"/>
                <xsl:map-entry key="'na'" select="'DIGIT SEVEN'"/>
@@ -2732,6 +2825,7 @@
                <xsl:map-entry key="'SB'" select="'NU'"/>
                <xsl:map-entry key="'scx'" select="'Zyyy'"/>
                <xsl:map-entry key="'WB'" select="'NU'"/>
+               <xsl:map-entry key="'XIDC'" select="true()"/>
             </xsl:map>
          </xsl:map-entry>
          <xsl:map-entry use-when="$codepoints-of-interest = 56" key="56">
@@ -2739,10 +2833,14 @@
                <xsl:map-entry key="'AHex'" select="true()"/>
                <xsl:map-entry key="'bc'" select="'EN'"/>
                <xsl:map-entry key="'dt'" select="'None'"/>
+               <xsl:map-entry key="'ea'" select="'Na'"/>
                <xsl:map-entry key="'EComp'" select="true()"/>
                <xsl:map-entry key="'Emoji'" select="true()"/>
                <xsl:map-entry key="'gc'" select="'Nd'"/>
+               <xsl:map-entry key="'GCB'" select="'XX'"/>
+               <xsl:map-entry key="'Gr_Base'" select="true()"/>
                <xsl:map-entry key="'Hex'" select="true()"/>
+               <xsl:map-entry key="'IDC'" select="true()"/>
                <xsl:map-entry key="'InSC'" select="'Number'"/>
                <xsl:map-entry key="'lb'" select="'NU'"/>
                <xsl:map-entry key="'na'" select="'DIGIT EIGHT'"/>
@@ -2751,6 +2849,7 @@
                <xsl:map-entry key="'SB'" select="'NU'"/>
                <xsl:map-entry key="'scx'" select="'Zyyy'"/>
                <xsl:map-entry key="'WB'" select="'NU'"/>
+               <xsl:map-entry key="'XIDC'" select="true()"/>
             </xsl:map>
          </xsl:map-entry>
          <xsl:map-entry use-when="$codepoints-of-interest = 57" key="57">
@@ -2758,10 +2857,14 @@
                <xsl:map-entry key="'AHex'" select="true()"/>
                <xsl:map-entry key="'bc'" select="'EN'"/>
                <xsl:map-entry key="'dt'" select="'None'"/>
+               <xsl:map-entry key="'ea'" select="'Na'"/>
                <xsl:map-entry key="'EComp'" select="true()"/>
                <xsl:map-entry key="'Emoji'" select="true()"/>
                <xsl:map-entry key="'gc'" select="'Nd'"/>
+               <xsl:map-entry key="'GCB'" select="'XX'"/>
+               <xsl:map-entry key="'Gr_Base'" select="true()"/>
                <xsl:map-entry key="'Hex'" select="true()"/>
+               <xsl:map-entry key="'IDC'" select="true()"/>
                <xsl:map-entry key="'InSC'" select="'Number'"/>
                <xsl:map-entry key="'lb'" select="'NU'"/>
                <xsl:map-entry key="'na'" select="'DIGIT NINE'"/>
@@ -2770,6 +2873,7 @@
                <xsl:map-entry key="'SB'" select="'NU'"/>
                <xsl:map-entry key="'scx'" select="'Zyyy'"/>
                <xsl:map-entry key="'WB'" select="'NU'"/>
+               <xsl:map-entry key="'XIDC'" select="true()"/>
             </xsl:map>
          </xsl:map-entry>
          <xsl:map-entry use-when="$codepoints-of-interest = 58" key="58">
@@ -2777,7 +2881,10 @@
                <xsl:map-entry key="'bc'" select="'CS'"/>
                <xsl:map-entry key="'CI'" select="true()"/>
                <xsl:map-entry key="'dt'" select="'None'"/>
+               <xsl:map-entry key="'ea'" select="'Na'"/>
                <xsl:map-entry key="'gc'" select="'Po'"/>
+               <xsl:map-entry key="'GCB'" select="'XX'"/>
+               <xsl:map-entry key="'Gr_Base'" select="true()"/>
                <xsl:map-entry key="'lb'" select="'IS'"/>
                <xsl:map-entry key="'na'" select="'COLON'"/>
                <xsl:map-entry key="'Pat_Syn'" select="true()"/>
@@ -2791,7 +2898,10 @@
             <xsl:map>
                <xsl:map-entry key="'bc'" select="'ON'"/>
                <xsl:map-entry key="'dt'" select="'None'"/>
+               <xsl:map-entry key="'ea'" select="'Na'"/>
                <xsl:map-entry key="'gc'" select="'Po'"/>
+               <xsl:map-entry key="'GCB'" select="'XX'"/>
+               <xsl:map-entry key="'Gr_Base'" select="true()"/>
                <xsl:map-entry key="'lb'" select="'IS'"/>
                <xsl:map-entry key="'na'" select="'SEMICOLON'"/>
                <xsl:map-entry key="'Pat_Syn'" select="true()"/>
@@ -2806,7 +2916,11 @@
                <xsl:map-entry key="'Bidi_M'" select="true()"/>
                <xsl:map-entry key="'bmg'" select="62"/>
                <xsl:map-entry key="'dt'" select="'None'"/>
+               <xsl:map-entry key="'ea'" select="'Na'"/>
                <xsl:map-entry key="'gc'" select="'Sm'"/>
+               <xsl:map-entry key="'GCB'" select="'XX'"/>
+               <xsl:map-entry key="'Gr_Base'" select="true()"/>
+               <xsl:map-entry key="'lb'" select="'AL'"/>
                <xsl:map-entry key="'Math'" select="true()"/>
                <xsl:map-entry key="'na'" select="'LESS-THAN SIGN'"/>
                <xsl:map-entry key="'Pat_Syn'" select="true()"/>
@@ -2817,7 +2931,11 @@
             <xsl:map>
                <xsl:map-entry key="'bc'" select="'ON'"/>
                <xsl:map-entry key="'dt'" select="'None'"/>
+               <xsl:map-entry key="'ea'" select="'Na'"/>
                <xsl:map-entry key="'gc'" select="'Sm'"/>
+               <xsl:map-entry key="'GCB'" select="'XX'"/>
+               <xsl:map-entry key="'Gr_Base'" select="true()"/>
+               <xsl:map-entry key="'lb'" select="'AL'"/>
                <xsl:map-entry key="'Math'" select="true()"/>
                <xsl:map-entry key="'na'" select="'EQUALS SIGN'"/>
                <xsl:map-entry key="'Pat_Syn'" select="true()"/>
@@ -2830,7 +2948,11 @@
                <xsl:map-entry key="'Bidi_M'" select="true()"/>
                <xsl:map-entry key="'bmg'" select="60"/>
                <xsl:map-entry key="'dt'" select="'None'"/>
+               <xsl:map-entry key="'ea'" select="'Na'"/>
                <xsl:map-entry key="'gc'" select="'Sm'"/>
+               <xsl:map-entry key="'GCB'" select="'XX'"/>
+               <xsl:map-entry key="'Gr_Base'" select="true()"/>
+               <xsl:map-entry key="'lb'" select="'AL'"/>
                <xsl:map-entry key="'Math'" select="true()"/>
                <xsl:map-entry key="'na'" select="'GREATER-THAN SIGN'"/>
                <xsl:map-entry key="'Pat_Syn'" select="true()"/>
@@ -2841,7 +2963,10 @@
             <xsl:map>
                <xsl:map-entry key="'bc'" select="'ON'"/>
                <xsl:map-entry key="'dt'" select="'None'"/>
+               <xsl:map-entry key="'ea'" select="'Na'"/>
                <xsl:map-entry key="'gc'" select="'Po'"/>
+               <xsl:map-entry key="'GCB'" select="'XX'"/>
+               <xsl:map-entry key="'Gr_Base'" select="true()"/>
                <xsl:map-entry key="'lb'" select="'EX'"/>
                <xsl:map-entry key="'na'" select="'QUESTION MARK'"/>
                <xsl:map-entry key="'Pat_Syn'" select="true()"/>
@@ -2855,7 +2980,11 @@
             <xsl:map>
                <xsl:map-entry key="'bc'" select="'ON'"/>
                <xsl:map-entry key="'dt'" select="'None'"/>
+               <xsl:map-entry key="'ea'" select="'Na'"/>
                <xsl:map-entry key="'gc'" select="'Po'"/>
+               <xsl:map-entry key="'GCB'" select="'XX'"/>
+               <xsl:map-entry key="'Gr_Base'" select="true()"/>
+               <xsl:map-entry key="'lb'" select="'AL'"/>
                <xsl:map-entry key="'na'" select="'COMMERCIAL AT'"/>
                <xsl:map-entry key="'Pat_Syn'" select="true()"/>
                <xsl:map-entry key="'scx'" select="'Zyyy'"/>
@@ -2864,481 +2993,871 @@
          <xsl:map-entry use-when="$codepoints-of-interest = 65" key="65">
             <xsl:map>
                <xsl:map-entry key="'AHex'" select="true()"/>
+               <xsl:map-entry key="'Alpha'" select="true()"/>
+               <xsl:map-entry key="'bc'" select="'L'"/>
+               <xsl:map-entry key="'Cased'" select="true()"/>
                <xsl:map-entry key="'cf'" select="97"/>
                <xsl:map-entry key="'CWCF'" select="true()"/>
+               <xsl:map-entry key="'CWCM'" select="true()"/>
                <xsl:map-entry key="'CWKCF'" select="true()"/>
                <xsl:map-entry key="'CWL'" select="true()"/>
                <xsl:map-entry key="'dt'" select="'None'"/>
+               <xsl:map-entry key="'ea'" select="'Na'"/>
                <xsl:map-entry key="'gc'" select="'Lu'"/>
+               <xsl:map-entry key="'GCB'" select="'XX'"/>
+               <xsl:map-entry key="'Gr_Base'" select="true()"/>
                <xsl:map-entry key="'Hex'" select="true()"/>
+               <xsl:map-entry key="'IDC'" select="true()"/>
+               <xsl:map-entry key="'IDS'" select="true()"/>
+               <xsl:map-entry key="'lb'" select="'AL'"/>
                <xsl:map-entry key="'lc'" select="97"/>
                <xsl:map-entry key="'na'" select="'LATIN CAPITAL LETTER A'"/>
                <xsl:map-entry key="'NFKC_CF'" select="97"/>
                <xsl:map-entry key="'NFKC_SCF'" select="97"/>
                <xsl:map-entry key="'SB'" select="'UP'"/>
+               <xsl:map-entry key="'sc'" select="'Latn'"/>
                <xsl:map-entry key="'scf'" select="97"/>
+               <xsl:map-entry key="'scx'" select="'Latn'"/>
                <xsl:map-entry key="'slc'" select="97"/>
                <xsl:map-entry key="'Upper'" select="true()"/>
+               <xsl:map-entry key="'WB'" select="'LE'"/>
+               <xsl:map-entry key="'XIDC'" select="true()"/>
+               <xsl:map-entry key="'XIDS'" select="true()"/>
             </xsl:map>
          </xsl:map-entry>
          <xsl:map-entry use-when="$codepoints-of-interest = 66" key="66">
             <xsl:map>
                <xsl:map-entry key="'AHex'" select="true()"/>
+               <xsl:map-entry key="'Alpha'" select="true()"/>
+               <xsl:map-entry key="'bc'" select="'L'"/>
+               <xsl:map-entry key="'Cased'" select="true()"/>
                <xsl:map-entry key="'cf'" select="98"/>
                <xsl:map-entry key="'CWCF'" select="true()"/>
+               <xsl:map-entry key="'CWCM'" select="true()"/>
                <xsl:map-entry key="'CWKCF'" select="true()"/>
                <xsl:map-entry key="'CWL'" select="true()"/>
                <xsl:map-entry key="'dt'" select="'None'"/>
+               <xsl:map-entry key="'ea'" select="'Na'"/>
                <xsl:map-entry key="'gc'" select="'Lu'"/>
+               <xsl:map-entry key="'GCB'" select="'XX'"/>
+               <xsl:map-entry key="'Gr_Base'" select="true()"/>
                <xsl:map-entry key="'Hex'" select="true()"/>
+               <xsl:map-entry key="'IDC'" select="true()"/>
+               <xsl:map-entry key="'IDS'" select="true()"/>
+               <xsl:map-entry key="'lb'" select="'AL'"/>
                <xsl:map-entry key="'lc'" select="98"/>
                <xsl:map-entry key="'na'" select="'LATIN CAPITAL LETTER B'"/>
                <xsl:map-entry key="'NFKC_CF'" select="98"/>
                <xsl:map-entry key="'NFKC_SCF'" select="98"/>
                <xsl:map-entry key="'SB'" select="'UP'"/>
+               <xsl:map-entry key="'sc'" select="'Latn'"/>
                <xsl:map-entry key="'scf'" select="98"/>
+               <xsl:map-entry key="'scx'" select="'Latn'"/>
                <xsl:map-entry key="'slc'" select="98"/>
                <xsl:map-entry key="'Upper'" select="true()"/>
+               <xsl:map-entry key="'WB'" select="'LE'"/>
+               <xsl:map-entry key="'XIDC'" select="true()"/>
+               <xsl:map-entry key="'XIDS'" select="true()"/>
             </xsl:map>
          </xsl:map-entry>
          <xsl:map-entry use-when="$codepoints-of-interest = 67" key="67">
             <xsl:map>
                <xsl:map-entry key="'AHex'" select="true()"/>
+               <xsl:map-entry key="'Alpha'" select="true()"/>
+               <xsl:map-entry key="'bc'" select="'L'"/>
+               <xsl:map-entry key="'Cased'" select="true()"/>
                <xsl:map-entry key="'cf'" select="99"/>
                <xsl:map-entry key="'CWCF'" select="true()"/>
+               <xsl:map-entry key="'CWCM'" select="true()"/>
                <xsl:map-entry key="'CWKCF'" select="true()"/>
                <xsl:map-entry key="'CWL'" select="true()"/>
                <xsl:map-entry key="'dt'" select="'None'"/>
+               <xsl:map-entry key="'ea'" select="'Na'"/>
                <xsl:map-entry key="'gc'" select="'Lu'"/>
+               <xsl:map-entry key="'GCB'" select="'XX'"/>
+               <xsl:map-entry key="'Gr_Base'" select="true()"/>
                <xsl:map-entry key="'Hex'" select="true()"/>
+               <xsl:map-entry key="'IDC'" select="true()"/>
+               <xsl:map-entry key="'IDS'" select="true()"/>
+               <xsl:map-entry key="'lb'" select="'AL'"/>
                <xsl:map-entry key="'lc'" select="99"/>
                <xsl:map-entry key="'na'" select="'LATIN CAPITAL LETTER C'"/>
                <xsl:map-entry key="'NFKC_CF'" select="99"/>
                <xsl:map-entry key="'NFKC_SCF'" select="99"/>
                <xsl:map-entry key="'SB'" select="'UP'"/>
+               <xsl:map-entry key="'sc'" select="'Latn'"/>
                <xsl:map-entry key="'scf'" select="99"/>
+               <xsl:map-entry key="'scx'" select="'Latn'"/>
                <xsl:map-entry key="'slc'" select="99"/>
                <xsl:map-entry key="'Upper'" select="true()"/>
+               <xsl:map-entry key="'WB'" select="'LE'"/>
+               <xsl:map-entry key="'XIDC'" select="true()"/>
+               <xsl:map-entry key="'XIDS'" select="true()"/>
             </xsl:map>
          </xsl:map-entry>
          <xsl:map-entry use-when="$codepoints-of-interest = 68" key="68">
             <xsl:map>
                <xsl:map-entry key="'AHex'" select="true()"/>
+               <xsl:map-entry key="'Alpha'" select="true()"/>
+               <xsl:map-entry key="'bc'" select="'L'"/>
+               <xsl:map-entry key="'Cased'" select="true()"/>
                <xsl:map-entry key="'cf'" select="100"/>
                <xsl:map-entry key="'CWCF'" select="true()"/>
+               <xsl:map-entry key="'CWCM'" select="true()"/>
                <xsl:map-entry key="'CWKCF'" select="true()"/>
                <xsl:map-entry key="'CWL'" select="true()"/>
                <xsl:map-entry key="'dt'" select="'None'"/>
+               <xsl:map-entry key="'ea'" select="'Na'"/>
                <xsl:map-entry key="'gc'" select="'Lu'"/>
+               <xsl:map-entry key="'GCB'" select="'XX'"/>
+               <xsl:map-entry key="'Gr_Base'" select="true()"/>
                <xsl:map-entry key="'Hex'" select="true()"/>
+               <xsl:map-entry key="'IDC'" select="true()"/>
+               <xsl:map-entry key="'IDS'" select="true()"/>
+               <xsl:map-entry key="'lb'" select="'AL'"/>
                <xsl:map-entry key="'lc'" select="100"/>
                <xsl:map-entry key="'na'" select="'LATIN CAPITAL LETTER D'"/>
                <xsl:map-entry key="'NFKC_CF'" select="100"/>
                <xsl:map-entry key="'NFKC_SCF'" select="100"/>
                <xsl:map-entry key="'SB'" select="'UP'"/>
+               <xsl:map-entry key="'sc'" select="'Latn'"/>
                <xsl:map-entry key="'scf'" select="100"/>
+               <xsl:map-entry key="'scx'" select="'Latn'"/>
                <xsl:map-entry key="'slc'" select="100"/>
                <xsl:map-entry key="'Upper'" select="true()"/>
+               <xsl:map-entry key="'WB'" select="'LE'"/>
+               <xsl:map-entry key="'XIDC'" select="true()"/>
+               <xsl:map-entry key="'XIDS'" select="true()"/>
             </xsl:map>
          </xsl:map-entry>
          <xsl:map-entry use-when="$codepoints-of-interest = 69" key="69">
             <xsl:map>
                <xsl:map-entry key="'AHex'" select="true()"/>
+               <xsl:map-entry key="'Alpha'" select="true()"/>
+               <xsl:map-entry key="'bc'" select="'L'"/>
+               <xsl:map-entry key="'Cased'" select="true()"/>
                <xsl:map-entry key="'cf'" select="101"/>
                <xsl:map-entry key="'CWCF'" select="true()"/>
+               <xsl:map-entry key="'CWCM'" select="true()"/>
                <xsl:map-entry key="'CWKCF'" select="true()"/>
                <xsl:map-entry key="'CWL'" select="true()"/>
                <xsl:map-entry key="'dt'" select="'None'"/>
+               <xsl:map-entry key="'ea'" select="'Na'"/>
                <xsl:map-entry key="'gc'" select="'Lu'"/>
+               <xsl:map-entry key="'GCB'" select="'XX'"/>
+               <xsl:map-entry key="'Gr_Base'" select="true()"/>
                <xsl:map-entry key="'Hex'" select="true()"/>
+               <xsl:map-entry key="'IDC'" select="true()"/>
+               <xsl:map-entry key="'IDS'" select="true()"/>
+               <xsl:map-entry key="'lb'" select="'AL'"/>
                <xsl:map-entry key="'lc'" select="101"/>
                <xsl:map-entry key="'na'" select="'LATIN CAPITAL LETTER E'"/>
                <xsl:map-entry key="'NFKC_CF'" select="101"/>
                <xsl:map-entry key="'NFKC_SCF'" select="101"/>
                <xsl:map-entry key="'SB'" select="'UP'"/>
+               <xsl:map-entry key="'sc'" select="'Latn'"/>
                <xsl:map-entry key="'scf'" select="101"/>
+               <xsl:map-entry key="'scx'" select="'Latn'"/>
                <xsl:map-entry key="'slc'" select="101"/>
                <xsl:map-entry key="'Upper'" select="true()"/>
+               <xsl:map-entry key="'WB'" select="'LE'"/>
+               <xsl:map-entry key="'XIDC'" select="true()"/>
+               <xsl:map-entry key="'XIDS'" select="true()"/>
             </xsl:map>
          </xsl:map-entry>
          <xsl:map-entry use-when="$codepoints-of-interest = 70" key="70">
             <xsl:map>
                <xsl:map-entry key="'AHex'" select="true()"/>
+               <xsl:map-entry key="'Alpha'" select="true()"/>
+               <xsl:map-entry key="'bc'" select="'L'"/>
+               <xsl:map-entry key="'Cased'" select="true()"/>
                <xsl:map-entry key="'cf'" select="102"/>
                <xsl:map-entry key="'CWCF'" select="true()"/>
+               <xsl:map-entry key="'CWCM'" select="true()"/>
                <xsl:map-entry key="'CWKCF'" select="true()"/>
                <xsl:map-entry key="'CWL'" select="true()"/>
                <xsl:map-entry key="'dt'" select="'None'"/>
+               <xsl:map-entry key="'ea'" select="'Na'"/>
                <xsl:map-entry key="'gc'" select="'Lu'"/>
+               <xsl:map-entry key="'GCB'" select="'XX'"/>
+               <xsl:map-entry key="'Gr_Base'" select="true()"/>
                <xsl:map-entry key="'Hex'" select="true()"/>
+               <xsl:map-entry key="'IDC'" select="true()"/>
+               <xsl:map-entry key="'IDS'" select="true()"/>
+               <xsl:map-entry key="'lb'" select="'AL'"/>
                <xsl:map-entry key="'lc'" select="102"/>
                <xsl:map-entry key="'na'" select="'LATIN CAPITAL LETTER F'"/>
                <xsl:map-entry key="'NFKC_CF'" select="102"/>
                <xsl:map-entry key="'NFKC_SCF'" select="102"/>
                <xsl:map-entry key="'SB'" select="'UP'"/>
+               <xsl:map-entry key="'sc'" select="'Latn'"/>
                <xsl:map-entry key="'scf'" select="102"/>
+               <xsl:map-entry key="'scx'" select="'Latn'"/>
                <xsl:map-entry key="'slc'" select="102"/>
                <xsl:map-entry key="'Upper'" select="true()"/>
+               <xsl:map-entry key="'WB'" select="'LE'"/>
+               <xsl:map-entry key="'XIDC'" select="true()"/>
+               <xsl:map-entry key="'XIDS'" select="true()"/>
             </xsl:map>
          </xsl:map-entry>
          <xsl:map-entry use-when="$codepoints-of-interest = 71" key="71">
             <xsl:map>
+               <xsl:map-entry key="'Alpha'" select="true()"/>
+               <xsl:map-entry key="'bc'" select="'L'"/>
+               <xsl:map-entry key="'Cased'" select="true()"/>
                <xsl:map-entry key="'cf'" select="103"/>
                <xsl:map-entry key="'CWCF'" select="true()"/>
+               <xsl:map-entry key="'CWCM'" select="true()"/>
                <xsl:map-entry key="'CWKCF'" select="true()"/>
                <xsl:map-entry key="'CWL'" select="true()"/>
                <xsl:map-entry key="'dt'" select="'None'"/>
+               <xsl:map-entry key="'ea'" select="'Na'"/>
                <xsl:map-entry key="'gc'" select="'Lu'"/>
+               <xsl:map-entry key="'GCB'" select="'XX'"/>
+               <xsl:map-entry key="'Gr_Base'" select="true()"/>
+               <xsl:map-entry key="'IDC'" select="true()"/>
+               <xsl:map-entry key="'IDS'" select="true()"/>
+               <xsl:map-entry key="'lb'" select="'AL'"/>
                <xsl:map-entry key="'lc'" select="103"/>
                <xsl:map-entry key="'na'" select="'LATIN CAPITAL LETTER G'"/>
                <xsl:map-entry key="'NFKC_CF'" select="103"/>
                <xsl:map-entry key="'NFKC_SCF'" select="103"/>
                <xsl:map-entry key="'SB'" select="'UP'"/>
+               <xsl:map-entry key="'sc'" select="'Latn'"/>
                <xsl:map-entry key="'scf'" select="103"/>
+               <xsl:map-entry key="'scx'" select="'Latn'"/>
                <xsl:map-entry key="'slc'" select="103"/>
                <xsl:map-entry key="'Upper'" select="true()"/>
+               <xsl:map-entry key="'WB'" select="'LE'"/>
+               <xsl:map-entry key="'XIDC'" select="true()"/>
+               <xsl:map-entry key="'XIDS'" select="true()"/>
             </xsl:map>
          </xsl:map-entry>
          <xsl:map-entry use-when="$codepoints-of-interest = 72" key="72">
             <xsl:map>
+               <xsl:map-entry key="'Alpha'" select="true()"/>
+               <xsl:map-entry key="'bc'" select="'L'"/>
+               <xsl:map-entry key="'Cased'" select="true()"/>
                <xsl:map-entry key="'cf'" select="104"/>
                <xsl:map-entry key="'CWCF'" select="true()"/>
+               <xsl:map-entry key="'CWCM'" select="true()"/>
                <xsl:map-entry key="'CWKCF'" select="true()"/>
                <xsl:map-entry key="'CWL'" select="true()"/>
                <xsl:map-entry key="'dt'" select="'None'"/>
+               <xsl:map-entry key="'ea'" select="'Na'"/>
                <xsl:map-entry key="'gc'" select="'Lu'"/>
+               <xsl:map-entry key="'GCB'" select="'XX'"/>
+               <xsl:map-entry key="'Gr_Base'" select="true()"/>
+               <xsl:map-entry key="'IDC'" select="true()"/>
+               <xsl:map-entry key="'IDS'" select="true()"/>
+               <xsl:map-entry key="'lb'" select="'AL'"/>
                <xsl:map-entry key="'lc'" select="104"/>
                <xsl:map-entry key="'na'" select="'LATIN CAPITAL LETTER H'"/>
                <xsl:map-entry key="'NFKC_CF'" select="104"/>
                <xsl:map-entry key="'NFKC_SCF'" select="104"/>
                <xsl:map-entry key="'SB'" select="'UP'"/>
+               <xsl:map-entry key="'sc'" select="'Latn'"/>
                <xsl:map-entry key="'scf'" select="104"/>
+               <xsl:map-entry key="'scx'" select="'Latn'"/>
                <xsl:map-entry key="'slc'" select="104"/>
                <xsl:map-entry key="'Upper'" select="true()"/>
+               <xsl:map-entry key="'WB'" select="'LE'"/>
+               <xsl:map-entry key="'XIDC'" select="true()"/>
+               <xsl:map-entry key="'XIDS'" select="true()"/>
             </xsl:map>
          </xsl:map-entry>
          <xsl:map-entry use-when="$codepoints-of-interest = 73" key="73">
             <xsl:map>
+               <xsl:map-entry key="'Alpha'" select="true()"/>
+               <xsl:map-entry key="'bc'" select="'L'"/>
+               <xsl:map-entry key="'Cased'" select="true()"/>
                <xsl:map-entry key="'cf'" select="105"/>
                <xsl:map-entry key="'CWCF'" select="true()"/>
+               <xsl:map-entry key="'CWCM'" select="true()"/>
                <xsl:map-entry key="'CWKCF'" select="true()"/>
                <xsl:map-entry key="'CWL'" select="true()"/>
                <xsl:map-entry key="'dt'" select="'None'"/>
+               <xsl:map-entry key="'ea'" select="'Na'"/>
                <xsl:map-entry key="'gc'" select="'Lu'"/>
+               <xsl:map-entry key="'GCB'" select="'XX'"/>
+               <xsl:map-entry key="'Gr_Base'" select="true()"/>
+               <xsl:map-entry key="'IDC'" select="true()"/>
+               <xsl:map-entry key="'IDS'" select="true()"/>
+               <xsl:map-entry key="'lb'" select="'AL'"/>
                <xsl:map-entry key="'lc'" select="105"/>
                <xsl:map-entry key="'na'" select="'LATIN CAPITAL LETTER I'"/>
                <xsl:map-entry key="'NFKC_CF'" select="105"/>
                <xsl:map-entry key="'NFKC_SCF'" select="105"/>
                <xsl:map-entry key="'SB'" select="'UP'"/>
+               <xsl:map-entry key="'sc'" select="'Latn'"/>
                <xsl:map-entry key="'scf'" select="105"/>
+               <xsl:map-entry key="'scx'" select="'Latn'"/>
                <xsl:map-entry key="'slc'" select="105"/>
                <xsl:map-entry key="'Upper'" select="true()"/>
+               <xsl:map-entry key="'WB'" select="'LE'"/>
+               <xsl:map-entry key="'XIDC'" select="true()"/>
+               <xsl:map-entry key="'XIDS'" select="true()"/>
             </xsl:map>
          </xsl:map-entry>
          <xsl:map-entry use-when="$codepoints-of-interest = 74" key="74">
             <xsl:map>
+               <xsl:map-entry key="'Alpha'" select="true()"/>
+               <xsl:map-entry key="'bc'" select="'L'"/>
+               <xsl:map-entry key="'Cased'" select="true()"/>
                <xsl:map-entry key="'cf'" select="106"/>
                <xsl:map-entry key="'CWCF'" select="true()"/>
+               <xsl:map-entry key="'CWCM'" select="true()"/>
                <xsl:map-entry key="'CWKCF'" select="true()"/>
                <xsl:map-entry key="'CWL'" select="true()"/>
                <xsl:map-entry key="'dt'" select="'None'"/>
+               <xsl:map-entry key="'ea'" select="'Na'"/>
                <xsl:map-entry key="'gc'" select="'Lu'"/>
+               <xsl:map-entry key="'GCB'" select="'XX'"/>
+               <xsl:map-entry key="'Gr_Base'" select="true()"/>
+               <xsl:map-entry key="'IDC'" select="true()"/>
+               <xsl:map-entry key="'IDS'" select="true()"/>
+               <xsl:map-entry key="'lb'" select="'AL'"/>
                <xsl:map-entry key="'lc'" select="106"/>
                <xsl:map-entry key="'na'" select="'LATIN CAPITAL LETTER J'"/>
                <xsl:map-entry key="'NFKC_CF'" select="106"/>
                <xsl:map-entry key="'NFKC_SCF'" select="106"/>
                <xsl:map-entry key="'SB'" select="'UP'"/>
+               <xsl:map-entry key="'sc'" select="'Latn'"/>
                <xsl:map-entry key="'scf'" select="106"/>
+               <xsl:map-entry key="'scx'" select="'Latn'"/>
                <xsl:map-entry key="'slc'" select="106"/>
                <xsl:map-entry key="'Upper'" select="true()"/>
+               <xsl:map-entry key="'WB'" select="'LE'"/>
+               <xsl:map-entry key="'XIDC'" select="true()"/>
+               <xsl:map-entry key="'XIDS'" select="true()"/>
             </xsl:map>
          </xsl:map-entry>
          <xsl:map-entry use-when="$codepoints-of-interest = 75" key="75">
             <xsl:map>
+               <xsl:map-entry key="'Alpha'" select="true()"/>
+               <xsl:map-entry key="'bc'" select="'L'"/>
+               <xsl:map-entry key="'Cased'" select="true()"/>
                <xsl:map-entry key="'cf'" select="107"/>
                <xsl:map-entry key="'CWCF'" select="true()"/>
+               <xsl:map-entry key="'CWCM'" select="true()"/>
                <xsl:map-entry key="'CWKCF'" select="true()"/>
                <xsl:map-entry key="'CWL'" select="true()"/>
                <xsl:map-entry key="'dt'" select="'None'"/>
+               <xsl:map-entry key="'ea'" select="'Na'"/>
                <xsl:map-entry key="'gc'" select="'Lu'"/>
+               <xsl:map-entry key="'GCB'" select="'XX'"/>
+               <xsl:map-entry key="'Gr_Base'" select="true()"/>
+               <xsl:map-entry key="'IDC'" select="true()"/>
+               <xsl:map-entry key="'IDS'" select="true()"/>
+               <xsl:map-entry key="'lb'" select="'AL'"/>
                <xsl:map-entry key="'lc'" select="107"/>
                <xsl:map-entry key="'na'" select="'LATIN CAPITAL LETTER K'"/>
                <xsl:map-entry key="'NFKC_CF'" select="107"/>
                <xsl:map-entry key="'NFKC_SCF'" select="107"/>
                <xsl:map-entry key="'SB'" select="'UP'"/>
+               <xsl:map-entry key="'sc'" select="'Latn'"/>
                <xsl:map-entry key="'scf'" select="107"/>
+               <xsl:map-entry key="'scx'" select="'Latn'"/>
                <xsl:map-entry key="'slc'" select="107"/>
                <xsl:map-entry key="'Upper'" select="true()"/>
+               <xsl:map-entry key="'WB'" select="'LE'"/>
+               <xsl:map-entry key="'XIDC'" select="true()"/>
+               <xsl:map-entry key="'XIDS'" select="true()"/>
             </xsl:map>
          </xsl:map-entry>
          <xsl:map-entry use-when="$codepoints-of-interest = 76" key="76">
             <xsl:map>
+               <xsl:map-entry key="'Alpha'" select="true()"/>
+               <xsl:map-entry key="'bc'" select="'L'"/>
+               <xsl:map-entry key="'Cased'" select="true()"/>
                <xsl:map-entry key="'cf'" select="108"/>
                <xsl:map-entry key="'CWCF'" select="true()"/>
+               <xsl:map-entry key="'CWCM'" select="true()"/>
                <xsl:map-entry key="'CWKCF'" select="true()"/>
                <xsl:map-entry key="'CWL'" select="true()"/>
                <xsl:map-entry key="'dt'" select="'None'"/>
+               <xsl:map-entry key="'ea'" select="'Na'"/>
                <xsl:map-entry key="'gc'" select="'Lu'"/>
+               <xsl:map-entry key="'GCB'" select="'XX'"/>
+               <xsl:map-entry key="'Gr_Base'" select="true()"/>
+               <xsl:map-entry key="'IDC'" select="true()"/>
+               <xsl:map-entry key="'IDS'" select="true()"/>
+               <xsl:map-entry key="'lb'" select="'AL'"/>
                <xsl:map-entry key="'lc'" select="108"/>
                <xsl:map-entry key="'na'" select="'LATIN CAPITAL LETTER L'"/>
                <xsl:map-entry key="'NFKC_CF'" select="108"/>
                <xsl:map-entry key="'NFKC_SCF'" select="108"/>
                <xsl:map-entry key="'SB'" select="'UP'"/>
+               <xsl:map-entry key="'sc'" select="'Latn'"/>
                <xsl:map-entry key="'scf'" select="108"/>
+               <xsl:map-entry key="'scx'" select="'Latn'"/>
                <xsl:map-entry key="'slc'" select="108"/>
                <xsl:map-entry key="'Upper'" select="true()"/>
+               <xsl:map-entry key="'WB'" select="'LE'"/>
+               <xsl:map-entry key="'XIDC'" select="true()"/>
+               <xsl:map-entry key="'XIDS'" select="true()"/>
             </xsl:map>
          </xsl:map-entry>
          <xsl:map-entry use-when="$codepoints-of-interest = 77" key="77">
             <xsl:map>
+               <xsl:map-entry key="'Alpha'" select="true()"/>
+               <xsl:map-entry key="'bc'" select="'L'"/>
+               <xsl:map-entry key="'Cased'" select="true()"/>
                <xsl:map-entry key="'cf'" select="109"/>
                <xsl:map-entry key="'CWCF'" select="true()"/>
+               <xsl:map-entry key="'CWCM'" select="true()"/>
                <xsl:map-entry key="'CWKCF'" select="true()"/>
                <xsl:map-entry key="'CWL'" select="true()"/>
                <xsl:map-entry key="'dt'" select="'None'"/>
+               <xsl:map-entry key="'ea'" select="'Na'"/>
                <xsl:map-entry key="'gc'" select="'Lu'"/>
+               <xsl:map-entry key="'GCB'" select="'XX'"/>
+               <xsl:map-entry key="'Gr_Base'" select="true()"/>
+               <xsl:map-entry key="'IDC'" select="true()"/>
+               <xsl:map-entry key="'IDS'" select="true()"/>
+               <xsl:map-entry key="'lb'" select="'AL'"/>
                <xsl:map-entry key="'lc'" select="109"/>
                <xsl:map-entry key="'na'" select="'LATIN CAPITAL LETTER M'"/>
                <xsl:map-entry key="'NFKC_CF'" select="109"/>
                <xsl:map-entry key="'NFKC_SCF'" select="109"/>
                <xsl:map-entry key="'SB'" select="'UP'"/>
+               <xsl:map-entry key="'sc'" select="'Latn'"/>
                <xsl:map-entry key="'scf'" select="109"/>
+               <xsl:map-entry key="'scx'" select="'Latn'"/>
                <xsl:map-entry key="'slc'" select="109"/>
                <xsl:map-entry key="'Upper'" select="true()"/>
+               <xsl:map-entry key="'WB'" select="'LE'"/>
+               <xsl:map-entry key="'XIDC'" select="true()"/>
+               <xsl:map-entry key="'XIDS'" select="true()"/>
             </xsl:map>
          </xsl:map-entry>
          <xsl:map-entry use-when="$codepoints-of-interest = 78" key="78">
             <xsl:map>
+               <xsl:map-entry key="'Alpha'" select="true()"/>
+               <xsl:map-entry key="'bc'" select="'L'"/>
+               <xsl:map-entry key="'Cased'" select="true()"/>
                <xsl:map-entry key="'cf'" select="110"/>
                <xsl:map-entry key="'CWCF'" select="true()"/>
+               <xsl:map-entry key="'CWCM'" select="true()"/>
                <xsl:map-entry key="'CWKCF'" select="true()"/>
                <xsl:map-entry key="'CWL'" select="true()"/>
                <xsl:map-entry key="'dt'" select="'None'"/>
+               <xsl:map-entry key="'ea'" select="'Na'"/>
                <xsl:map-entry key="'gc'" select="'Lu'"/>
+               <xsl:map-entry key="'GCB'" select="'XX'"/>
+               <xsl:map-entry key="'Gr_Base'" select="true()"/>
+               <xsl:map-entry key="'IDC'" select="true()"/>
+               <xsl:map-entry key="'IDS'" select="true()"/>
+               <xsl:map-entry key="'lb'" select="'AL'"/>
                <xsl:map-entry key="'lc'" select="110"/>
                <xsl:map-entry key="'na'" select="'LATIN CAPITAL LETTER N'"/>
                <xsl:map-entry key="'NFKC_CF'" select="110"/>
                <xsl:map-entry key="'NFKC_SCF'" select="110"/>
                <xsl:map-entry key="'SB'" select="'UP'"/>
+               <xsl:map-entry key="'sc'" select="'Latn'"/>
                <xsl:map-entry key="'scf'" select="110"/>
+               <xsl:map-entry key="'scx'" select="'Latn'"/>
                <xsl:map-entry key="'slc'" select="110"/>
                <xsl:map-entry key="'Upper'" select="true()"/>
+               <xsl:map-entry key="'WB'" select="'LE'"/>
+               <xsl:map-entry key="'XIDC'" select="true()"/>
+               <xsl:map-entry key="'XIDS'" select="true()"/>
             </xsl:map>
          </xsl:map-entry>
          <xsl:map-entry use-when="$codepoints-of-interest = 79" key="79">
             <xsl:map>
+               <xsl:map-entry key="'Alpha'" select="true()"/>
+               <xsl:map-entry key="'bc'" select="'L'"/>
+               <xsl:map-entry key="'Cased'" select="true()"/>
                <xsl:map-entry key="'cf'" select="111"/>
                <xsl:map-entry key="'CWCF'" select="true()"/>
+               <xsl:map-entry key="'CWCM'" select="true()"/>
                <xsl:map-entry key="'CWKCF'" select="true()"/>
                <xsl:map-entry key="'CWL'" select="true()"/>
                <xsl:map-entry key="'dt'" select="'None'"/>
+               <xsl:map-entry key="'ea'" select="'Na'"/>
                <xsl:map-entry key="'gc'" select="'Lu'"/>
+               <xsl:map-entry key="'GCB'" select="'XX'"/>
+               <xsl:map-entry key="'Gr_Base'" select="true()"/>
+               <xsl:map-entry key="'IDC'" select="true()"/>
+               <xsl:map-entry key="'IDS'" select="true()"/>
+               <xsl:map-entry key="'lb'" select="'AL'"/>
                <xsl:map-entry key="'lc'" select="111"/>
                <xsl:map-entry key="'na'" select="'LATIN CAPITAL LETTER O'"/>
                <xsl:map-entry key="'NFKC_CF'" select="111"/>
                <xsl:map-entry key="'NFKC_SCF'" select="111"/>
                <xsl:map-entry key="'SB'" select="'UP'"/>
+               <xsl:map-entry key="'sc'" select="'Latn'"/>
                <xsl:map-entry key="'scf'" select="111"/>
+               <xsl:map-entry key="'scx'" select="'Latn'"/>
                <xsl:map-entry key="'slc'" select="111"/>
                <xsl:map-entry key="'Upper'" select="true()"/>
+               <xsl:map-entry key="'WB'" select="'LE'"/>
+               <xsl:map-entry key="'XIDC'" select="true()"/>
+               <xsl:map-entry key="'XIDS'" select="true()"/>
             </xsl:map>
          </xsl:map-entry>
          <xsl:map-entry use-when="$codepoints-of-interest = 80" key="80">
             <xsl:map>
+               <xsl:map-entry key="'Alpha'" select="true()"/>
+               <xsl:map-entry key="'bc'" select="'L'"/>
+               <xsl:map-entry key="'Cased'" select="true()"/>
                <xsl:map-entry key="'cf'" select="112"/>
                <xsl:map-entry key="'CWCF'" select="true()"/>
+               <xsl:map-entry key="'CWCM'" select="true()"/>
                <xsl:map-entry key="'CWKCF'" select="true()"/>
                <xsl:map-entry key="'CWL'" select="true()"/>
                <xsl:map-entry key="'dt'" select="'None'"/>
+               <xsl:map-entry key="'ea'" select="'Na'"/>
                <xsl:map-entry key="'gc'" select="'Lu'"/>
+               <xsl:map-entry key="'GCB'" select="'XX'"/>
+               <xsl:map-entry key="'Gr_Base'" select="true()"/>
+               <xsl:map-entry key="'IDC'" select="true()"/>
+               <xsl:map-entry key="'IDS'" select="true()"/>
+               <xsl:map-entry key="'lb'" select="'AL'"/>
                <xsl:map-entry key="'lc'" select="112"/>
                <xsl:map-entry key="'na'" select="'LATIN CAPITAL LETTER P'"/>
                <xsl:map-entry key="'NFKC_CF'" select="112"/>
                <xsl:map-entry key="'NFKC_SCF'" select="112"/>
                <xsl:map-entry key="'SB'" select="'UP'"/>
+               <xsl:map-entry key="'sc'" select="'Latn'"/>
                <xsl:map-entry key="'scf'" select="112"/>
+               <xsl:map-entry key="'scx'" select="'Latn'"/>
                <xsl:map-entry key="'slc'" select="112"/>
                <xsl:map-entry key="'Upper'" select="true()"/>
+               <xsl:map-entry key="'WB'" select="'LE'"/>
+               <xsl:map-entry key="'XIDC'" select="true()"/>
+               <xsl:map-entry key="'XIDS'" select="true()"/>
             </xsl:map>
          </xsl:map-entry>
          <xsl:map-entry use-when="$codepoints-of-interest = 81" key="81">
             <xsl:map>
+               <xsl:map-entry key="'Alpha'" select="true()"/>
+               <xsl:map-entry key="'bc'" select="'L'"/>
+               <xsl:map-entry key="'Cased'" select="true()"/>
                <xsl:map-entry key="'cf'" select="113"/>
                <xsl:map-entry key="'CWCF'" select="true()"/>
+               <xsl:map-entry key="'CWCM'" select="true()"/>
                <xsl:map-entry key="'CWKCF'" select="true()"/>
                <xsl:map-entry key="'CWL'" select="true()"/>
                <xsl:map-entry key="'dt'" select="'None'"/>
+               <xsl:map-entry key="'ea'" select="'Na'"/>
                <xsl:map-entry key="'gc'" select="'Lu'"/>
+               <xsl:map-entry key="'GCB'" select="'XX'"/>
+               <xsl:map-entry key="'Gr_Base'" select="true()"/>
+               <xsl:map-entry key="'IDC'" select="true()"/>
+               <xsl:map-entry key="'IDS'" select="true()"/>
+               <xsl:map-entry key="'lb'" select="'AL'"/>
                <xsl:map-entry key="'lc'" select="113"/>
                <xsl:map-entry key="'na'" select="'LATIN CAPITAL LETTER Q'"/>
                <xsl:map-entry key="'NFKC_CF'" select="113"/>
                <xsl:map-entry key="'NFKC_SCF'" select="113"/>
                <xsl:map-entry key="'SB'" select="'UP'"/>
+               <xsl:map-entry key="'sc'" select="'Latn'"/>
                <xsl:map-entry key="'scf'" select="113"/>
+               <xsl:map-entry key="'scx'" select="'Latn'"/>
                <xsl:map-entry key="'slc'" select="113"/>
                <xsl:map-entry key="'Upper'" select="true()"/>
+               <xsl:map-entry key="'WB'" select="'LE'"/>
+               <xsl:map-entry key="'XIDC'" select="true()"/>
+               <xsl:map-entry key="'XIDS'" select="true()"/>
             </xsl:map>
          </xsl:map-entry>
          <xsl:map-entry use-when="$codepoints-of-interest = 82" key="82">
             <xsl:map>
+               <xsl:map-entry key="'Alpha'" select="true()"/>
+               <xsl:map-entry key="'bc'" select="'L'"/>
+               <xsl:map-entry key="'Cased'" select="true()"/>
                <xsl:map-entry key="'cf'" select="114"/>
                <xsl:map-entry key="'CWCF'" select="true()"/>
+               <xsl:map-entry key="'CWCM'" select="true()"/>
                <xsl:map-entry key="'CWKCF'" select="true()"/>
                <xsl:map-entry key="'CWL'" select="true()"/>
                <xsl:map-entry key="'dt'" select="'None'"/>
+               <xsl:map-entry key="'ea'" select="'Na'"/>
                <xsl:map-entry key="'gc'" select="'Lu'"/>
+               <xsl:map-entry key="'GCB'" select="'XX'"/>
+               <xsl:map-entry key="'Gr_Base'" select="true()"/>
+               <xsl:map-entry key="'IDC'" select="true()"/>
+               <xsl:map-entry key="'IDS'" select="true()"/>
+               <xsl:map-entry key="'lb'" select="'AL'"/>
                <xsl:map-entry key="'lc'" select="114"/>
                <xsl:map-entry key="'na'" select="'LATIN CAPITAL LETTER R'"/>
                <xsl:map-entry key="'NFKC_CF'" select="114"/>
                <xsl:map-entry key="'NFKC_SCF'" select="114"/>
                <xsl:map-entry key="'SB'" select="'UP'"/>
+               <xsl:map-entry key="'sc'" select="'Latn'"/>
                <xsl:map-entry key="'scf'" select="114"/>
+               <xsl:map-entry key="'scx'" select="'Latn'"/>
                <xsl:map-entry key="'slc'" select="114"/>
                <xsl:map-entry key="'Upper'" select="true()"/>
+               <xsl:map-entry key="'WB'" select="'LE'"/>
+               <xsl:map-entry key="'XIDC'" select="true()"/>
+               <xsl:map-entry key="'XIDS'" select="true()"/>
             </xsl:map>
          </xsl:map-entry>
          <xsl:map-entry use-when="$codepoints-of-interest = 83" key="83">
             <xsl:map>
+               <xsl:map-entry key="'Alpha'" select="true()"/>
+               <xsl:map-entry key="'bc'" select="'L'"/>
+               <xsl:map-entry key="'Cased'" select="true()"/>
                <xsl:map-entry key="'cf'" select="115"/>
                <xsl:map-entry key="'CWCF'" select="true()"/>
+               <xsl:map-entry key="'CWCM'" select="true()"/>
                <xsl:map-entry key="'CWKCF'" select="true()"/>
                <xsl:map-entry key="'CWL'" select="true()"/>
                <xsl:map-entry key="'dt'" select="'None'"/>
+               <xsl:map-entry key="'ea'" select="'Na'"/>
                <xsl:map-entry key="'gc'" select="'Lu'"/>
+               <xsl:map-entry key="'GCB'" select="'XX'"/>
+               <xsl:map-entry key="'Gr_Base'" select="true()"/>
+               <xsl:map-entry key="'IDC'" select="true()"/>
+               <xsl:map-entry key="'IDS'" select="true()"/>
+               <xsl:map-entry key="'lb'" select="'AL'"/>
                <xsl:map-entry key="'lc'" select="115"/>
                <xsl:map-entry key="'na'" select="'LATIN CAPITAL LETTER S'"/>
                <xsl:map-entry key="'NFKC_CF'" select="115"/>
                <xsl:map-entry key="'NFKC_SCF'" select="115"/>
                <xsl:map-entry key="'SB'" select="'UP'"/>
+               <xsl:map-entry key="'sc'" select="'Latn'"/>
                <xsl:map-entry key="'scf'" select="115"/>
+               <xsl:map-entry key="'scx'" select="'Latn'"/>
                <xsl:map-entry key="'slc'" select="115"/>
                <xsl:map-entry key="'Upper'" select="true()"/>
+               <xsl:map-entry key="'WB'" select="'LE'"/>
+               <xsl:map-entry key="'XIDC'" select="true()"/>
+               <xsl:map-entry key="'XIDS'" select="true()"/>
             </xsl:map>
          </xsl:map-entry>
          <xsl:map-entry use-when="$codepoints-of-interest = 84" key="84">
             <xsl:map>
+               <xsl:map-entry key="'Alpha'" select="true()"/>
+               <xsl:map-entry key="'bc'" select="'L'"/>
+               <xsl:map-entry key="'Cased'" select="true()"/>
                <xsl:map-entry key="'cf'" select="116"/>
                <xsl:map-entry key="'CWCF'" select="true()"/>
+               <xsl:map-entry key="'CWCM'" select="true()"/>
                <xsl:map-entry key="'CWKCF'" select="true()"/>
                <xsl:map-entry key="'CWL'" select="true()"/>
                <xsl:map-entry key="'dt'" select="'None'"/>
+               <xsl:map-entry key="'ea'" select="'Na'"/>
                <xsl:map-entry key="'gc'" select="'Lu'"/>
+               <xsl:map-entry key="'GCB'" select="'XX'"/>
+               <xsl:map-entry key="'Gr_Base'" select="true()"/>
+               <xsl:map-entry key="'IDC'" select="true()"/>
+               <xsl:map-entry key="'IDS'" select="true()"/>
+               <xsl:map-entry key="'lb'" select="'AL'"/>
                <xsl:map-entry key="'lc'" select="116"/>
                <xsl:map-entry key="'na'" select="'LATIN CAPITAL LETTER T'"/>
                <xsl:map-entry key="'NFKC_CF'" select="116"/>
                <xsl:map-entry key="'NFKC_SCF'" select="116"/>
                <xsl:map-entry key="'SB'" select="'UP'"/>
+               <xsl:map-entry key="'sc'" select="'Latn'"/>
                <xsl:map-entry key="'scf'" select="116"/>
+               <xsl:map-entry key="'scx'" select="'Latn'"/>
                <xsl:map-entry key="'slc'" select="116"/>
                <xsl:map-entry key="'Upper'" select="true()"/>
+               <xsl:map-entry key="'WB'" select="'LE'"/>
+               <xsl:map-entry key="'XIDC'" select="true()"/>
+               <xsl:map-entry key="'XIDS'" select="true()"/>
             </xsl:map>
          </xsl:map-entry>
          <xsl:map-entry use-when="$codepoints-of-interest = 85" key="85">
             <xsl:map>
+               <xsl:map-entry key="'Alpha'" select="true()"/>
+               <xsl:map-entry key="'bc'" select="'L'"/>
+               <xsl:map-entry key="'Cased'" select="true()"/>
                <xsl:map-entry key="'cf'" select="117"/>
                <xsl:map-entry key="'CWCF'" select="true()"/>
+               <xsl:map-entry key="'CWCM'" select="true()"/>
                <xsl:map-entry key="'CWKCF'" select="true()"/>
                <xsl:map-entry key="'CWL'" select="true()"/>
                <xsl:map-entry key="'dt'" select="'None'"/>
+               <xsl:map-entry key="'ea'" select="'Na'"/>
                <xsl:map-entry key="'gc'" select="'Lu'"/>
+               <xsl:map-entry key="'GCB'" select="'XX'"/>
+               <xsl:map-entry key="'Gr_Base'" select="true()"/>
+               <xsl:map-entry key="'IDC'" select="true()"/>
+               <xsl:map-entry key="'IDS'" select="true()"/>
+               <xsl:map-entry key="'lb'" select="'AL'"/>
                <xsl:map-entry key="'lc'" select="117"/>
                <xsl:map-entry key="'na'" select="'LATIN CAPITAL LETTER U'"/>
                <xsl:map-entry key="'NFKC_CF'" select="117"/>
                <xsl:map-entry key="'NFKC_SCF'" select="117"/>
                <xsl:map-entry key="'SB'" select="'UP'"/>
+               <xsl:map-entry key="'sc'" select="'Latn'"/>
                <xsl:map-entry key="'scf'" select="117"/>
+               <xsl:map-entry key="'scx'" select="'Latn'"/>
                <xsl:map-entry key="'slc'" select="117"/>
                <xsl:map-entry key="'Upper'" select="true()"/>
+               <xsl:map-entry key="'WB'" select="'LE'"/>
+               <xsl:map-entry key="'XIDC'" select="true()"/>
+               <xsl:map-entry key="'XIDS'" select="true()"/>
             </xsl:map>
          </xsl:map-entry>
          <xsl:map-entry use-when="$codepoints-of-interest = 86" key="86">
             <xsl:map>
+               <xsl:map-entry key="'Alpha'" select="true()"/>
+               <xsl:map-entry key="'bc'" select="'L'"/>
+               <xsl:map-entry key="'Cased'" select="true()"/>
                <xsl:map-entry key="'cf'" select="118"/>
                <xsl:map-entry key="'CWCF'" select="true()"/>
+               <xsl:map-entry key="'CWCM'" select="true()"/>
                <xsl:map-entry key="'CWKCF'" select="true()"/>
                <xsl:map-entry key="'CWL'" select="true()"/>
                <xsl:map-entry key="'dt'" select="'None'"/>
+               <xsl:map-entry key="'ea'" select="'Na'"/>
                <xsl:map-entry key="'gc'" select="'Lu'"/>
+               <xsl:map-entry key="'GCB'" select="'XX'"/>
+               <xsl:map-entry key="'Gr_Base'" select="true()"/>
+               <xsl:map-entry key="'IDC'" select="true()"/>
+               <xsl:map-entry key="'IDS'" select="true()"/>
+               <xsl:map-entry key="'lb'" select="'AL'"/>
                <xsl:map-entry key="'lc'" select="118"/>
                <xsl:map-entry key="'na'" select="'LATIN CAPITAL LETTER V'"/>
                <xsl:map-entry key="'NFKC_CF'" select="118"/>
                <xsl:map-entry key="'NFKC_SCF'" select="118"/>
                <xsl:map-entry key="'SB'" select="'UP'"/>
+               <xsl:map-entry key="'sc'" select="'Latn'"/>
                <xsl:map-entry key="'scf'" select="118"/>
+               <xsl:map-entry key="'scx'" select="'Latn'"/>
                <xsl:map-entry key="'slc'" select="118"/>
                <xsl:map-entry key="'Upper'" select="true()"/>
+               <xsl:map-entry key="'WB'" select="'LE'"/>
+               <xsl:map-entry key="'XIDC'" select="true()"/>
+               <xsl:map-entry key="'XIDS'" select="true()"/>
             </xsl:map>
          </xsl:map-entry>
          <xsl:map-entry use-when="$codepoints-of-interest = 87" key="87">
             <xsl:map>
+               <xsl:map-entry key="'Alpha'" select="true()"/>
+               <xsl:map-entry key="'bc'" select="'L'"/>
+               <xsl:map-entry key="'Cased'" select="true()"/>
                <xsl:map-entry key="'cf'" select="119"/>
                <xsl:map-entry key="'CWCF'" select="true()"/>
+               <xsl:map-entry key="'CWCM'" select="true()"/>
                <xsl:map-entry key="'CWKCF'" select="true()"/>
                <xsl:map-entry key="'CWL'" select="true()"/>
                <xsl:map-entry key="'dt'" select="'None'"/>
+               <xsl:map-entry key="'ea'" select="'Na'"/>
                <xsl:map-entry key="'gc'" select="'Lu'"/>
+               <xsl:map-entry key="'GCB'" select="'XX'"/>
+               <xsl:map-entry key="'Gr_Base'" select="true()"/>
+               <xsl:map-entry key="'IDC'" select="true()"/>
+               <xsl:map-entry key="'IDS'" select="true()"/>
+               <xsl:map-entry key="'lb'" select="'AL'"/>
                <xsl:map-entry key="'lc'" select="119"/>
                <xsl:map-entry key="'na'" select="'LATIN CAPITAL LETTER W'"/>
                <xsl:map-entry key="'NFKC_CF'" select="119"/>
                <xsl:map-entry key="'NFKC_SCF'" select="119"/>
                <xsl:map-entry key="'SB'" select="'UP'"/>
+               <xsl:map-entry key="'sc'" select="'Latn'"/>
                <xsl:map-entry key="'scf'" select="119"/>
+               <xsl:map-entry key="'scx'" select="'Latn'"/>
                <xsl:map-entry key="'slc'" select="119"/>
                <xsl:map-entry key="'Upper'" select="true()"/>
+               <xsl:map-entry key="'WB'" select="'LE'"/>
+               <xsl:map-entry key="'XIDC'" select="true()"/>
+               <xsl:map-entry key="'XIDS'" select="true()"/>
             </xsl:map>
          </xsl:map-entry>
          <xsl:map-entry use-when="$codepoints-of-interest = 88" key="88">
             <xsl:map>
+               <xsl:map-entry key="'Alpha'" select="true()"/>
+               <xsl:map-entry key="'bc'" select="'L'"/>
+               <xsl:map-entry key="'Cased'" select="true()"/>
                <xsl:map-entry key="'cf'" select="120"/>
                <xsl:map-entry key="'CWCF'" select="true()"/>
+               <xsl:map-entry key="'CWCM'" select="true()"/>
                <xsl:map-entry key="'CWKCF'" select="true()"/>
                <xsl:map-entry key="'CWL'" select="true()"/>
                <xsl:map-entry key="'dt'" select="'None'"/>
+               <xsl:map-entry key="'ea'" select="'Na'"/>
                <xsl:map-entry key="'gc'" select="'Lu'"/>
+               <xsl:map-entry key="'GCB'" select="'XX'"/>
+               <xsl:map-entry key="'Gr_Base'" select="true()"/>
+               <xsl:map-entry key="'IDC'" select="true()"/>
+               <xsl:map-entry key="'IDS'" select="true()"/>
+               <xsl:map-entry key="'lb'" select="'AL'"/>
                <xsl:map-entry key="'lc'" select="120"/>
                <xsl:map-entry key="'na'" select="'LATIN CAPITAL LETTER X'"/>
                <xsl:map-entry key="'NFKC_CF'" select="120"/>
                <xsl:map-entry key="'NFKC_SCF'" select="120"/>
                <xsl:map-entry key="'SB'" select="'UP'"/>
+               <xsl:map-entry key="'sc'" select="'Latn'"/>
                <xsl:map-entry key="'scf'" select="120"/>
+               <xsl:map-entry key="'scx'" select="'Latn'"/>
                <xsl:map-entry key="'slc'" select="120"/>
                <xsl:map-entry key="'Upper'" select="true()"/>
+               <xsl:map-entry key="'WB'" select="'LE'"/>
+               <xsl:map-entry key="'XIDC'" select="true()"/>
+               <xsl:map-entry key="'XIDS'" select="true()"/>
             </xsl:map>
          </xsl:map-entry>
          <xsl:map-entry use-when="$codepoints-of-interest = 89" key="89">
             <xsl:map>
+               <xsl:map-entry key="'Alpha'" select="true()"/>
+               <xsl:map-entry key="'bc'" select="'L'"/>
+               <xsl:map-entry key="'Cased'" select="true()"/>
                <xsl:map-entry key="'cf'" select="121"/>
                <xsl:map-entry key="'CWCF'" select="true()"/>
+               <xsl:map-entry key="'CWCM'" select="true()"/>
                <xsl:map-entry key="'CWKCF'" select="true()"/>
                <xsl:map-entry key="'CWL'" select="true()"/>
                <xsl:map-entry key="'dt'" select="'None'"/>
+               <xsl:map-entry key="'ea'" select="'Na'"/>
                <xsl:map-entry key="'gc'" select="'Lu'"/>
+               <xsl:map-entry key="'GCB'" select="'XX'"/>
+               <xsl:map-entry key="'Gr_Base'" select="true()"/>
+               <xsl:map-entry key="'IDC'" select="true()"/>
+               <xsl:map-entry key="'IDS'" select="true()"/>
+               <xsl:map-entry key="'lb'" select="'AL'"/>
                <xsl:map-entry key="'lc'" select="121"/>
                <xsl:map-entry key="'na'" select="'LATIN CAPITAL LETTER Y'"/>
                <xsl:map-entry key="'NFKC_CF'" select="121"/>
                <xsl:map-entry key="'NFKC_SCF'" select="121"/>
                <xsl:map-entry key="'SB'" select="'UP'"/>
+               <xsl:map-entry key="'sc'" select="'Latn'"/>
                <xsl:map-entry key="'scf'" select="121"/>
+               <xsl:map-entry key="'scx'" select="'Latn'"/>
                <xsl:map-entry key="'slc'" select="121"/>
                <xsl:map-entry key="'Upper'" select="true()"/>
+               <xsl:map-entry key="'WB'" select="'LE'"/>
+               <xsl:map-entry key="'XIDC'" select="true()"/>
+               <xsl:map-entry key="'XIDS'" select="true()"/>
             </xsl:map>
          </xsl:map-entry>
          <xsl:map-entry use-when="$codepoints-of-interest = 90" key="90">
             <xsl:map>
+               <xsl:map-entry key="'Alpha'" select="true()"/>
+               <xsl:map-entry key="'bc'" select="'L'"/>
+               <xsl:map-entry key="'Cased'" select="true()"/>
                <xsl:map-entry key="'cf'" select="122"/>
                <xsl:map-entry key="'CWCF'" select="true()"/>
+               <xsl:map-entry key="'CWCM'" select="true()"/>
                <xsl:map-entry key="'CWKCF'" select="true()"/>
                <xsl:map-entry key="'CWL'" select="true()"/>
                <xsl:map-entry key="'dt'" select="'None'"/>
+               <xsl:map-entry key="'ea'" select="'Na'"/>
                <xsl:map-entry key="'gc'" select="'Lu'"/>
+               <xsl:map-entry key="'GCB'" select="'XX'"/>
+               <xsl:map-entry key="'Gr_Base'" select="true()"/>
+               <xsl:map-entry key="'IDC'" select="true()"/>
+               <xsl:map-entry key="'IDS'" select="true()"/>
+               <xsl:map-entry key="'lb'" select="'AL'"/>
                <xsl:map-entry key="'lc'" select="122"/>
                <xsl:map-entry key="'na'" select="'LATIN CAPITAL LETTER Z'"/>
                <xsl:map-entry key="'NFKC_CF'" select="122"/>
                <xsl:map-entry key="'NFKC_SCF'" select="122"/>
                <xsl:map-entry key="'SB'" select="'UP'"/>
+               <xsl:map-entry key="'sc'" select="'Latn'"/>
                <xsl:map-entry key="'scf'" select="122"/>
+               <xsl:map-entry key="'scx'" select="'Latn'"/>
                <xsl:map-entry key="'slc'" select="122"/>
                <xsl:map-entry key="'Upper'" select="true()"/>
+               <xsl:map-entry key="'WB'" select="'LE'"/>
+               <xsl:map-entry key="'XIDC'" select="true()"/>
+               <xsl:map-entry key="'XIDS'" select="true()"/>
             </xsl:map>
          </xsl:map-entry>
          <xsl:map-entry use-when="$codepoints-of-interest = 91" key="91">
@@ -3349,7 +3868,10 @@
                <xsl:map-entry key="'bpb'" select="93"/>
                <xsl:map-entry key="'bpt'" select="'o'"/>
                <xsl:map-entry key="'dt'" select="'None'"/>
+               <xsl:map-entry key="'ea'" select="'Na'"/>
                <xsl:map-entry key="'gc'" select="'Ps'"/>
+               <xsl:map-entry key="'GCB'" select="'XX'"/>
+               <xsl:map-entry key="'Gr_Base'" select="true()"/>
                <xsl:map-entry key="'lb'" select="'OP'"/>
                <xsl:map-entry key="'na'" select="'LEFT SQUARE BRACKET'"/>
                <xsl:map-entry key="'na1'" select="'OPENING SQUARE BRACKET'"/>
@@ -3362,7 +3884,10 @@
             <xsl:map>
                <xsl:map-entry key="'bc'" select="'ON'"/>
                <xsl:map-entry key="'dt'" select="'None'"/>
+               <xsl:map-entry key="'ea'" select="'Na'"/>
                <xsl:map-entry key="'gc'" select="'Po'"/>
+               <xsl:map-entry key="'GCB'" select="'XX'"/>
+               <xsl:map-entry key="'Gr_Base'" select="true()"/>
                <xsl:map-entry key="'lb'" select="'PR'"/>
                <xsl:map-entry key="'na'" select="'REVERSE SOLIDUS'"/>
                <xsl:map-entry key="'na1'" select="'BACKSLASH'"/>
@@ -3378,7 +3903,10 @@
                <xsl:map-entry key="'bpb'" select="91"/>
                <xsl:map-entry key="'bpt'" select="'c'"/>
                <xsl:map-entry key="'dt'" select="'None'"/>
+               <xsl:map-entry key="'ea'" select="'Na'"/>
                <xsl:map-entry key="'gc'" select="'Pe'"/>
+               <xsl:map-entry key="'GCB'" select="'XX'"/>
+               <xsl:map-entry key="'Gr_Base'" select="true()"/>
                <xsl:map-entry key="'lb'" select="'CP'"/>
                <xsl:map-entry key="'na'" select="'RIGHT SQUARE BRACKET'"/>
                <xsl:map-entry key="'na1'" select="'CLOSING SQUARE BRACKET'"/>
@@ -3393,7 +3921,11 @@
                <xsl:map-entry key="'CI'" select="true()"/>
                <xsl:map-entry key="'Dia'" select="true()"/>
                <xsl:map-entry key="'dt'" select="'None'"/>
+               <xsl:map-entry key="'ea'" select="'Na'"/>
                <xsl:map-entry key="'gc'" select="'Sk'"/>
+               <xsl:map-entry key="'GCB'" select="'XX'"/>
+               <xsl:map-entry key="'Gr_Base'" select="true()"/>
+               <xsl:map-entry key="'lb'" select="'AL'"/>
                <xsl:map-entry key="'Math'" select="true()"/>
                <xsl:map-entry key="'na'" select="'CIRCUMFLEX ACCENT'"/>
                <xsl:map-entry key="'na1'" select="'SPACING CIRCUMFLEX'"/>
@@ -3406,11 +3938,17 @@
             <xsl:map>
                <xsl:map-entry key="'bc'" select="'ON'"/>
                <xsl:map-entry key="'dt'" select="'None'"/>
+               <xsl:map-entry key="'ea'" select="'Na'"/>
                <xsl:map-entry key="'gc'" select="'Pc'"/>
+               <xsl:map-entry key="'GCB'" select="'XX'"/>
+               <xsl:map-entry key="'Gr_Base'" select="true()"/>
+               <xsl:map-entry key="'IDC'" select="true()"/>
+               <xsl:map-entry key="'lb'" select="'AL'"/>
                <xsl:map-entry key="'na'" select="'LOW LINE'"/>
                <xsl:map-entry key="'na1'" select="'SPACING UNDERSCORE'"/>
                <xsl:map-entry key="'scx'" select="'Zyyy'"/>
                <xsl:map-entry key="'WB'" select="'EX'"/>
+               <xsl:map-entry key="'XIDC'" select="true()"/>
             </xsl:map>
          </xsl:map-entry>
          <xsl:map-entry use-when="$codepoints-of-interest = 96" key="96">
@@ -3419,7 +3957,11 @@
                <xsl:map-entry key="'CI'" select="true()"/>
                <xsl:map-entry key="'Dia'" select="true()"/>
                <xsl:map-entry key="'dt'" select="'None'"/>
+               <xsl:map-entry key="'ea'" select="'Na'"/>
                <xsl:map-entry key="'gc'" select="'Sk'"/>
+               <xsl:map-entry key="'GCB'" select="'XX'"/>
+               <xsl:map-entry key="'Gr_Base'" select="true()"/>
+               <xsl:map-entry key="'lb'" select="'AL'"/>
                <xsl:map-entry key="'na'" select="'GRAVE ACCENT'"/>
                <xsl:map-entry key="'na1'" select="'SPACING GRAVE'"/>
                <xsl:map-entry key="'Pat_Syn'" select="true()"/>
@@ -3429,72 +3971,1181 @@
          <xsl:map-entry use-when="$codepoints-of-interest = 97" key="97">
             <xsl:map>
                <xsl:map-entry key="'AHex'" select="true()"/>
+               <xsl:map-entry key="'Alpha'" select="true()"/>
+               <xsl:map-entry key="'bc'" select="'L'"/>
+               <xsl:map-entry key="'Cased'" select="true()"/>
+               <xsl:map-entry key="'CWCM'" select="true()"/>
                <xsl:map-entry key="'CWT'" select="true()"/>
                <xsl:map-entry key="'CWU'" select="true()"/>
                <xsl:map-entry key="'dt'" select="'None'"/>
+               <xsl:map-entry key="'ea'" select="'Na'"/>
+               <xsl:map-entry key="'gc'" select="'Ll'"/>
+               <xsl:map-entry key="'GCB'" select="'XX'"/>
+               <xsl:map-entry key="'Gr_Base'" select="true()"/>
                <xsl:map-entry key="'Hex'" select="true()"/>
+               <xsl:map-entry key="'IDC'" select="true()"/>
+               <xsl:map-entry key="'IDS'" select="true()"/>
+               <xsl:map-entry key="'lb'" select="'AL'"/>
                <xsl:map-entry key="'Lower'" select="true()"/>
                <xsl:map-entry key="'na'" select="'LATIN SMALL LETTER A'"/>
+               <xsl:map-entry key="'SB'" select="'LO'"/>
+               <xsl:map-entry key="'sc'" select="'Latn'"/>
+               <xsl:map-entry key="'scx'" select="'Latn'"/>
                <xsl:map-entry key="'stc'" select="65"/>
                <xsl:map-entry key="'suc'" select="65"/>
                <xsl:map-entry key="'tc'" select="65"/>
                <xsl:map-entry key="'uc'" select="65"/>
+               <xsl:map-entry key="'WB'" select="'LE'"/>
+               <xsl:map-entry key="'XIDC'" select="true()"/>
+               <xsl:map-entry key="'XIDS'" select="true()"/>
             </xsl:map>
          </xsl:map-entry>
          <xsl:map-entry use-when="$codepoints-of-interest = 98" key="98">
             <xsl:map>
                <xsl:map-entry key="'AHex'" select="true()"/>
+               <xsl:map-entry key="'Alpha'" select="true()"/>
+               <xsl:map-entry key="'bc'" select="'L'"/>
+               <xsl:map-entry key="'Cased'" select="true()"/>
+               <xsl:map-entry key="'CWCM'" select="true()"/>
                <xsl:map-entry key="'CWT'" select="true()"/>
                <xsl:map-entry key="'CWU'" select="true()"/>
                <xsl:map-entry key="'dt'" select="'None'"/>
+               <xsl:map-entry key="'ea'" select="'Na'"/>
+               <xsl:map-entry key="'gc'" select="'Ll'"/>
+               <xsl:map-entry key="'GCB'" select="'XX'"/>
+               <xsl:map-entry key="'Gr_Base'" select="true()"/>
                <xsl:map-entry key="'Hex'" select="true()"/>
+               <xsl:map-entry key="'IDC'" select="true()"/>
+               <xsl:map-entry key="'IDS'" select="true()"/>
+               <xsl:map-entry key="'lb'" select="'AL'"/>
                <xsl:map-entry key="'Lower'" select="true()"/>
                <xsl:map-entry key="'na'" select="'LATIN SMALL LETTER B'"/>
+               <xsl:map-entry key="'SB'" select="'LO'"/>
+               <xsl:map-entry key="'sc'" select="'Latn'"/>
+               <xsl:map-entry key="'scx'" select="'Latn'"/>
                <xsl:map-entry key="'stc'" select="66"/>
                <xsl:map-entry key="'suc'" select="66"/>
                <xsl:map-entry key="'tc'" select="66"/>
                <xsl:map-entry key="'uc'" select="66"/>
+               <xsl:map-entry key="'WB'" select="'LE'"/>
+               <xsl:map-entry key="'XIDC'" select="true()"/>
+               <xsl:map-entry key="'XIDS'" select="true()"/>
             </xsl:map>
          </xsl:map-entry>
          <xsl:map-entry use-when="$codepoints-of-interest = 99" key="99">
             <xsl:map>
                <xsl:map-entry key="'AHex'" select="true()"/>
+               <xsl:map-entry key="'Alpha'" select="true()"/>
+               <xsl:map-entry key="'bc'" select="'L'"/>
+               <xsl:map-entry key="'Cased'" select="true()"/>
+               <xsl:map-entry key="'CWCM'" select="true()"/>
                <xsl:map-entry key="'CWT'" select="true()"/>
                <xsl:map-entry key="'CWU'" select="true()"/>
                <xsl:map-entry key="'dt'" select="'None'"/>
+               <xsl:map-entry key="'ea'" select="'Na'"/>
+               <xsl:map-entry key="'gc'" select="'Ll'"/>
+               <xsl:map-entry key="'GCB'" select="'XX'"/>
+               <xsl:map-entry key="'Gr_Base'" select="true()"/>
                <xsl:map-entry key="'Hex'" select="true()"/>
+               <xsl:map-entry key="'IDC'" select="true()"/>
+               <xsl:map-entry key="'IDS'" select="true()"/>
+               <xsl:map-entry key="'lb'" select="'AL'"/>
                <xsl:map-entry key="'Lower'" select="true()"/>
                <xsl:map-entry key="'na'" select="'LATIN SMALL LETTER C'"/>
+               <xsl:map-entry key="'SB'" select="'LO'"/>
+               <xsl:map-entry key="'sc'" select="'Latn'"/>
+               <xsl:map-entry key="'scx'" select="'Latn'"/>
                <xsl:map-entry key="'stc'" select="67"/>
                <xsl:map-entry key="'suc'" select="67"/>
                <xsl:map-entry key="'tc'" select="67"/>
                <xsl:map-entry key="'uc'" select="67"/>
+               <xsl:map-entry key="'WB'" select="'LE'"/>
+               <xsl:map-entry key="'XIDC'" select="true()"/>
+               <xsl:map-entry key="'XIDS'" select="true()"/>
             </xsl:map>
          </xsl:map-entry>
-      </xsl:map>
-   </xsl:variable>
-   <xsl:variable name="fn4:cp-submap1" as="map(*)">
-      <xsl:map>
-         <xsl:map-entry key="'bc'" select="'S'"/>
-         <xsl:map-entry key="'lb'" select="'BA'"/>
-      </xsl:map>
-   </xsl:variable>
-   <xsl:variable name="fn4:cp-submap2" as="map(*)">
-      <xsl:map>
-         <xsl:map-entry key="'bc'" select="'B'"/>
-         <xsl:map-entry key="'lb'" select="'LF'"/>
-      </xsl:map>
-   </xsl:variable>
-   <xsl:variable name="fn4:prop-bc-submap" as="map(*)">
-      <xsl:map>
-         <xsl:map-entry key="'B'" select="10"/>
-         <xsl:map-entry key="'S'" select="9"/>
-      </xsl:map>
-   </xsl:variable>
-   <xsl:variable name="fn4:prop-lb-submap" as="map(*)">
-      <xsl:map>
-         <xsl:map-entry key="'BA'" select="9"/>
-         <xsl:map-entry key="'LF'" select="10"/>
+         <xsl:map-entry use-when="$codepoints-of-interest = 100" key="100">
+            <xsl:map>
+               <xsl:map-entry key="'AHex'" select="true()"/>
+               <xsl:map-entry key="'Alpha'" select="true()"/>
+               <xsl:map-entry key="'bc'" select="'L'"/>
+               <xsl:map-entry key="'Cased'" select="true()"/>
+               <xsl:map-entry key="'CWCM'" select="true()"/>
+               <xsl:map-entry key="'CWT'" select="true()"/>
+               <xsl:map-entry key="'CWU'" select="true()"/>
+               <xsl:map-entry key="'dt'" select="'None'"/>
+               <xsl:map-entry key="'ea'" select="'Na'"/>
+               <xsl:map-entry key="'gc'" select="'Ll'"/>
+               <xsl:map-entry key="'GCB'" select="'XX'"/>
+               <xsl:map-entry key="'Gr_Base'" select="true()"/>
+               <xsl:map-entry key="'Hex'" select="true()"/>
+               <xsl:map-entry key="'IDC'" select="true()"/>
+               <xsl:map-entry key="'IDS'" select="true()"/>
+               <xsl:map-entry key="'lb'" select="'AL'"/>
+               <xsl:map-entry key="'Lower'" select="true()"/>
+               <xsl:map-entry key="'na'" select="'LATIN SMALL LETTER D'"/>
+               <xsl:map-entry key="'SB'" select="'LO'"/>
+               <xsl:map-entry key="'sc'" select="'Latn'"/>
+               <xsl:map-entry key="'scx'" select="'Latn'"/>
+               <xsl:map-entry key="'stc'" select="68"/>
+               <xsl:map-entry key="'suc'" select="68"/>
+               <xsl:map-entry key="'tc'" select="68"/>
+               <xsl:map-entry key="'uc'" select="68"/>
+               <xsl:map-entry key="'WB'" select="'LE'"/>
+               <xsl:map-entry key="'XIDC'" select="true()"/>
+               <xsl:map-entry key="'XIDS'" select="true()"/>
+            </xsl:map>
+         </xsl:map-entry>
+         <xsl:map-entry use-when="$codepoints-of-interest = 101" key="101">
+            <xsl:map>
+               <xsl:map-entry key="'AHex'" select="true()"/>
+               <xsl:map-entry key="'Alpha'" select="true()"/>
+               <xsl:map-entry key="'bc'" select="'L'"/>
+               <xsl:map-entry key="'Cased'" select="true()"/>
+               <xsl:map-entry key="'CWCM'" select="true()"/>
+               <xsl:map-entry key="'CWT'" select="true()"/>
+               <xsl:map-entry key="'CWU'" select="true()"/>
+               <xsl:map-entry key="'dt'" select="'None'"/>
+               <xsl:map-entry key="'ea'" select="'Na'"/>
+               <xsl:map-entry key="'gc'" select="'Ll'"/>
+               <xsl:map-entry key="'GCB'" select="'XX'"/>
+               <xsl:map-entry key="'Gr_Base'" select="true()"/>
+               <xsl:map-entry key="'Hex'" select="true()"/>
+               <xsl:map-entry key="'IDC'" select="true()"/>
+               <xsl:map-entry key="'IDS'" select="true()"/>
+               <xsl:map-entry key="'lb'" select="'AL'"/>
+               <xsl:map-entry key="'Lower'" select="true()"/>
+               <xsl:map-entry key="'na'" select="'LATIN SMALL LETTER E'"/>
+               <xsl:map-entry key="'SB'" select="'LO'"/>
+               <xsl:map-entry key="'sc'" select="'Latn'"/>
+               <xsl:map-entry key="'scx'" select="'Latn'"/>
+               <xsl:map-entry key="'stc'" select="69"/>
+               <xsl:map-entry key="'suc'" select="69"/>
+               <xsl:map-entry key="'tc'" select="69"/>
+               <xsl:map-entry key="'uc'" select="69"/>
+               <xsl:map-entry key="'WB'" select="'LE'"/>
+               <xsl:map-entry key="'XIDC'" select="true()"/>
+               <xsl:map-entry key="'XIDS'" select="true()"/>
+            </xsl:map>
+         </xsl:map-entry>
+         <xsl:map-entry use-when="$codepoints-of-interest = 102" key="102">
+            <xsl:map>
+               <xsl:map-entry key="'AHex'" select="true()"/>
+               <xsl:map-entry key="'Alpha'" select="true()"/>
+               <xsl:map-entry key="'bc'" select="'L'"/>
+               <xsl:map-entry key="'Cased'" select="true()"/>
+               <xsl:map-entry key="'CWCM'" select="true()"/>
+               <xsl:map-entry key="'CWT'" select="true()"/>
+               <xsl:map-entry key="'CWU'" select="true()"/>
+               <xsl:map-entry key="'dt'" select="'None'"/>
+               <xsl:map-entry key="'ea'" select="'Na'"/>
+               <xsl:map-entry key="'gc'" select="'Ll'"/>
+               <xsl:map-entry key="'GCB'" select="'XX'"/>
+               <xsl:map-entry key="'Gr_Base'" select="true()"/>
+               <xsl:map-entry key="'Hex'" select="true()"/>
+               <xsl:map-entry key="'IDC'" select="true()"/>
+               <xsl:map-entry key="'IDS'" select="true()"/>
+               <xsl:map-entry key="'lb'" select="'AL'"/>
+               <xsl:map-entry key="'Lower'" select="true()"/>
+               <xsl:map-entry key="'na'" select="'LATIN SMALL LETTER F'"/>
+               <xsl:map-entry key="'SB'" select="'LO'"/>
+               <xsl:map-entry key="'sc'" select="'Latn'"/>
+               <xsl:map-entry key="'scx'" select="'Latn'"/>
+               <xsl:map-entry key="'stc'" select="70"/>
+               <xsl:map-entry key="'suc'" select="70"/>
+               <xsl:map-entry key="'tc'" select="70"/>
+               <xsl:map-entry key="'uc'" select="70"/>
+               <xsl:map-entry key="'WB'" select="'LE'"/>
+               <xsl:map-entry key="'XIDC'" select="true()"/>
+               <xsl:map-entry key="'XIDS'" select="true()"/>
+            </xsl:map>
+         </xsl:map-entry>
+         <xsl:map-entry use-when="$codepoints-of-interest = 103" key="103">
+            <xsl:map>
+               <xsl:map-entry key="'Alpha'" select="true()"/>
+               <xsl:map-entry key="'bc'" select="'L'"/>
+               <xsl:map-entry key="'Cased'" select="true()"/>
+               <xsl:map-entry key="'CWCM'" select="true()"/>
+               <xsl:map-entry key="'CWT'" select="true()"/>
+               <xsl:map-entry key="'CWU'" select="true()"/>
+               <xsl:map-entry key="'dt'" select="'None'"/>
+               <xsl:map-entry key="'ea'" select="'Na'"/>
+               <xsl:map-entry key="'gc'" select="'Ll'"/>
+               <xsl:map-entry key="'GCB'" select="'XX'"/>
+               <xsl:map-entry key="'Gr_Base'" select="true()"/>
+               <xsl:map-entry key="'IDC'" select="true()"/>
+               <xsl:map-entry key="'IDS'" select="true()"/>
+               <xsl:map-entry key="'lb'" select="'AL'"/>
+               <xsl:map-entry key="'Lower'" select="true()"/>
+               <xsl:map-entry key="'na'" select="'LATIN SMALL LETTER G'"/>
+               <xsl:map-entry key="'SB'" select="'LO'"/>
+               <xsl:map-entry key="'sc'" select="'Latn'"/>
+               <xsl:map-entry key="'scx'" select="'Latn'"/>
+               <xsl:map-entry key="'stc'" select="71"/>
+               <xsl:map-entry key="'suc'" select="71"/>
+               <xsl:map-entry key="'tc'" select="71"/>
+               <xsl:map-entry key="'uc'" select="71"/>
+               <xsl:map-entry key="'WB'" select="'LE'"/>
+               <xsl:map-entry key="'XIDC'" select="true()"/>
+               <xsl:map-entry key="'XIDS'" select="true()"/>
+            </xsl:map>
+         </xsl:map-entry>
+         <xsl:map-entry use-when="$codepoints-of-interest = 104" key="104">
+            <xsl:map>
+               <xsl:map-entry key="'Alpha'" select="true()"/>
+               <xsl:map-entry key="'bc'" select="'L'"/>
+               <xsl:map-entry key="'Cased'" select="true()"/>
+               <xsl:map-entry key="'CWCM'" select="true()"/>
+               <xsl:map-entry key="'CWT'" select="true()"/>
+               <xsl:map-entry key="'CWU'" select="true()"/>
+               <xsl:map-entry key="'dt'" select="'None'"/>
+               <xsl:map-entry key="'ea'" select="'Na'"/>
+               <xsl:map-entry key="'gc'" select="'Ll'"/>
+               <xsl:map-entry key="'GCB'" select="'XX'"/>
+               <xsl:map-entry key="'Gr_Base'" select="true()"/>
+               <xsl:map-entry key="'IDC'" select="true()"/>
+               <xsl:map-entry key="'IDS'" select="true()"/>
+               <xsl:map-entry key="'lb'" select="'AL'"/>
+               <xsl:map-entry key="'Lower'" select="true()"/>
+               <xsl:map-entry key="'na'" select="'LATIN SMALL LETTER H'"/>
+               <xsl:map-entry key="'SB'" select="'LO'"/>
+               <xsl:map-entry key="'sc'" select="'Latn'"/>
+               <xsl:map-entry key="'scx'" select="'Latn'"/>
+               <xsl:map-entry key="'stc'" select="72"/>
+               <xsl:map-entry key="'suc'" select="72"/>
+               <xsl:map-entry key="'tc'" select="72"/>
+               <xsl:map-entry key="'uc'" select="72"/>
+               <xsl:map-entry key="'WB'" select="'LE'"/>
+               <xsl:map-entry key="'XIDC'" select="true()"/>
+               <xsl:map-entry key="'XIDS'" select="true()"/>
+            </xsl:map>
+         </xsl:map-entry>
+         <xsl:map-entry use-when="$codepoints-of-interest = 105" key="105">
+            <xsl:map>
+               <xsl:map-entry key="'Alpha'" select="true()"/>
+               <xsl:map-entry key="'bc'" select="'L'"/>
+               <xsl:map-entry key="'Cased'" select="true()"/>
+               <xsl:map-entry key="'CWCM'" select="true()"/>
+               <xsl:map-entry key="'CWT'" select="true()"/>
+               <xsl:map-entry key="'CWU'" select="true()"/>
+               <xsl:map-entry key="'dt'" select="'None'"/>
+               <xsl:map-entry key="'ea'" select="'Na'"/>
+               <xsl:map-entry key="'gc'" select="'Ll'"/>
+               <xsl:map-entry key="'GCB'" select="'XX'"/>
+               <xsl:map-entry key="'Gr_Base'" select="true()"/>
+               <xsl:map-entry key="'IDC'" select="true()"/>
+               <xsl:map-entry key="'IDS'" select="true()"/>
+               <xsl:map-entry key="'lb'" select="'AL'"/>
+               <xsl:map-entry key="'Lower'" select="true()"/>
+               <xsl:map-entry key="'na'" select="'LATIN SMALL LETTER I'"/>
+               <xsl:map-entry key="'SB'" select="'LO'"/>
+               <xsl:map-entry key="'sc'" select="'Latn'"/>
+               <xsl:map-entry key="'scx'" select="'Latn'"/>
+               <xsl:map-entry key="'SD'" select="true()"/>
+               <xsl:map-entry key="'stc'" select="73"/>
+               <xsl:map-entry key="'suc'" select="73"/>
+               <xsl:map-entry key="'tc'" select="73"/>
+               <xsl:map-entry key="'uc'" select="73"/>
+               <xsl:map-entry key="'WB'" select="'LE'"/>
+               <xsl:map-entry key="'XIDC'" select="true()"/>
+               <xsl:map-entry key="'XIDS'" select="true()"/>
+            </xsl:map>
+         </xsl:map-entry>
+         <xsl:map-entry use-when="$codepoints-of-interest = 106" key="106">
+            <xsl:map>
+               <xsl:map-entry key="'Alpha'" select="true()"/>
+               <xsl:map-entry key="'bc'" select="'L'"/>
+               <xsl:map-entry key="'Cased'" select="true()"/>
+               <xsl:map-entry key="'CWCM'" select="true()"/>
+               <xsl:map-entry key="'CWT'" select="true()"/>
+               <xsl:map-entry key="'CWU'" select="true()"/>
+               <xsl:map-entry key="'dt'" select="'None'"/>
+               <xsl:map-entry key="'ea'" select="'Na'"/>
+               <xsl:map-entry key="'gc'" select="'Ll'"/>
+               <xsl:map-entry key="'GCB'" select="'XX'"/>
+               <xsl:map-entry key="'Gr_Base'" select="true()"/>
+               <xsl:map-entry key="'IDC'" select="true()"/>
+               <xsl:map-entry key="'IDS'" select="true()"/>
+               <xsl:map-entry key="'lb'" select="'AL'"/>
+               <xsl:map-entry key="'Lower'" select="true()"/>
+               <xsl:map-entry key="'na'" select="'LATIN SMALL LETTER J'"/>
+               <xsl:map-entry key="'SB'" select="'LO'"/>
+               <xsl:map-entry key="'sc'" select="'Latn'"/>
+               <xsl:map-entry key="'scx'" select="'Latn'"/>
+               <xsl:map-entry key="'SD'" select="true()"/>
+               <xsl:map-entry key="'stc'" select="74"/>
+               <xsl:map-entry key="'suc'" select="74"/>
+               <xsl:map-entry key="'tc'" select="74"/>
+               <xsl:map-entry key="'uc'" select="74"/>
+               <xsl:map-entry key="'WB'" select="'LE'"/>
+               <xsl:map-entry key="'XIDC'" select="true()"/>
+               <xsl:map-entry key="'XIDS'" select="true()"/>
+            </xsl:map>
+         </xsl:map-entry>
+         <xsl:map-entry use-when="$codepoints-of-interest = 107" key="107">
+            <xsl:map>
+               <xsl:map-entry key="'Alpha'" select="true()"/>
+               <xsl:map-entry key="'bc'" select="'L'"/>
+               <xsl:map-entry key="'Cased'" select="true()"/>
+               <xsl:map-entry key="'CWCM'" select="true()"/>
+               <xsl:map-entry key="'CWT'" select="true()"/>
+               <xsl:map-entry key="'CWU'" select="true()"/>
+               <xsl:map-entry key="'dt'" select="'None'"/>
+               <xsl:map-entry key="'ea'" select="'Na'"/>
+               <xsl:map-entry key="'gc'" select="'Ll'"/>
+               <xsl:map-entry key="'GCB'" select="'XX'"/>
+               <xsl:map-entry key="'Gr_Base'" select="true()"/>
+               <xsl:map-entry key="'IDC'" select="true()"/>
+               <xsl:map-entry key="'IDS'" select="true()"/>
+               <xsl:map-entry key="'lb'" select="'AL'"/>
+               <xsl:map-entry key="'Lower'" select="true()"/>
+               <xsl:map-entry key="'na'" select="'LATIN SMALL LETTER K'"/>
+               <xsl:map-entry key="'SB'" select="'LO'"/>
+               <xsl:map-entry key="'sc'" select="'Latn'"/>
+               <xsl:map-entry key="'scx'" select="'Latn'"/>
+               <xsl:map-entry key="'stc'" select="75"/>
+               <xsl:map-entry key="'suc'" select="75"/>
+               <xsl:map-entry key="'tc'" select="75"/>
+               <xsl:map-entry key="'uc'" select="75"/>
+               <xsl:map-entry key="'WB'" select="'LE'"/>
+               <xsl:map-entry key="'XIDC'" select="true()"/>
+               <xsl:map-entry key="'XIDS'" select="true()"/>
+            </xsl:map>
+         </xsl:map-entry>
+         <xsl:map-entry use-when="$codepoints-of-interest = 108" key="108">
+            <xsl:map>
+               <xsl:map-entry key="'Alpha'" select="true()"/>
+               <xsl:map-entry key="'bc'" select="'L'"/>
+               <xsl:map-entry key="'Cased'" select="true()"/>
+               <xsl:map-entry key="'CWCM'" select="true()"/>
+               <xsl:map-entry key="'CWT'" select="true()"/>
+               <xsl:map-entry key="'CWU'" select="true()"/>
+               <xsl:map-entry key="'dt'" select="'None'"/>
+               <xsl:map-entry key="'ea'" select="'Na'"/>
+               <xsl:map-entry key="'gc'" select="'Ll'"/>
+               <xsl:map-entry key="'GCB'" select="'XX'"/>
+               <xsl:map-entry key="'Gr_Base'" select="true()"/>
+               <xsl:map-entry key="'IDC'" select="true()"/>
+               <xsl:map-entry key="'IDS'" select="true()"/>
+               <xsl:map-entry key="'lb'" select="'AL'"/>
+               <xsl:map-entry key="'Lower'" select="true()"/>
+               <xsl:map-entry key="'na'" select="'LATIN SMALL LETTER L'"/>
+               <xsl:map-entry key="'SB'" select="'LO'"/>
+               <xsl:map-entry key="'sc'" select="'Latn'"/>
+               <xsl:map-entry key="'scx'" select="'Latn'"/>
+               <xsl:map-entry key="'stc'" select="76"/>
+               <xsl:map-entry key="'suc'" select="76"/>
+               <xsl:map-entry key="'tc'" select="76"/>
+               <xsl:map-entry key="'uc'" select="76"/>
+               <xsl:map-entry key="'WB'" select="'LE'"/>
+               <xsl:map-entry key="'XIDC'" select="true()"/>
+               <xsl:map-entry key="'XIDS'" select="true()"/>
+            </xsl:map>
+         </xsl:map-entry>
+         <xsl:map-entry use-when="$codepoints-of-interest = 109" key="109">
+            <xsl:map>
+               <xsl:map-entry key="'Alpha'" select="true()"/>
+               <xsl:map-entry key="'bc'" select="'L'"/>
+               <xsl:map-entry key="'Cased'" select="true()"/>
+               <xsl:map-entry key="'CWCM'" select="true()"/>
+               <xsl:map-entry key="'CWT'" select="true()"/>
+               <xsl:map-entry key="'CWU'" select="true()"/>
+               <xsl:map-entry key="'dt'" select="'None'"/>
+               <xsl:map-entry key="'ea'" select="'Na'"/>
+               <xsl:map-entry key="'gc'" select="'Ll'"/>
+               <xsl:map-entry key="'GCB'" select="'XX'"/>
+               <xsl:map-entry key="'Gr_Base'" select="true()"/>
+               <xsl:map-entry key="'IDC'" select="true()"/>
+               <xsl:map-entry key="'IDS'" select="true()"/>
+               <xsl:map-entry key="'lb'" select="'AL'"/>
+               <xsl:map-entry key="'Lower'" select="true()"/>
+               <xsl:map-entry key="'na'" select="'LATIN SMALL LETTER M'"/>
+               <xsl:map-entry key="'SB'" select="'LO'"/>
+               <xsl:map-entry key="'sc'" select="'Latn'"/>
+               <xsl:map-entry key="'scx'" select="'Latn'"/>
+               <xsl:map-entry key="'stc'" select="77"/>
+               <xsl:map-entry key="'suc'" select="77"/>
+               <xsl:map-entry key="'tc'" select="77"/>
+               <xsl:map-entry key="'uc'" select="77"/>
+               <xsl:map-entry key="'WB'" select="'LE'"/>
+               <xsl:map-entry key="'XIDC'" select="true()"/>
+               <xsl:map-entry key="'XIDS'" select="true()"/>
+            </xsl:map>
+         </xsl:map-entry>
+         <xsl:map-entry use-when="$codepoints-of-interest = 110" key="110">
+            <xsl:map>
+               <xsl:map-entry key="'Alpha'" select="true()"/>
+               <xsl:map-entry key="'bc'" select="'L'"/>
+               <xsl:map-entry key="'Cased'" select="true()"/>
+               <xsl:map-entry key="'CWCM'" select="true()"/>
+               <xsl:map-entry key="'CWT'" select="true()"/>
+               <xsl:map-entry key="'CWU'" select="true()"/>
+               <xsl:map-entry key="'dt'" select="'None'"/>
+               <xsl:map-entry key="'ea'" select="'Na'"/>
+               <xsl:map-entry key="'gc'" select="'Ll'"/>
+               <xsl:map-entry key="'GCB'" select="'XX'"/>
+               <xsl:map-entry key="'Gr_Base'" select="true()"/>
+               <xsl:map-entry key="'IDC'" select="true()"/>
+               <xsl:map-entry key="'IDS'" select="true()"/>
+               <xsl:map-entry key="'lb'" select="'AL'"/>
+               <xsl:map-entry key="'Lower'" select="true()"/>
+               <xsl:map-entry key="'na'" select="'LATIN SMALL LETTER N'"/>
+               <xsl:map-entry key="'SB'" select="'LO'"/>
+               <xsl:map-entry key="'sc'" select="'Latn'"/>
+               <xsl:map-entry key="'scx'" select="'Latn'"/>
+               <xsl:map-entry key="'stc'" select="78"/>
+               <xsl:map-entry key="'suc'" select="78"/>
+               <xsl:map-entry key="'tc'" select="78"/>
+               <xsl:map-entry key="'uc'" select="78"/>
+               <xsl:map-entry key="'WB'" select="'LE'"/>
+               <xsl:map-entry key="'XIDC'" select="true()"/>
+               <xsl:map-entry key="'XIDS'" select="true()"/>
+            </xsl:map>
+         </xsl:map-entry>
+         <xsl:map-entry use-when="$codepoints-of-interest = 111" key="111">
+            <xsl:map>
+               <xsl:map-entry key="'Alpha'" select="true()"/>
+               <xsl:map-entry key="'bc'" select="'L'"/>
+               <xsl:map-entry key="'Cased'" select="true()"/>
+               <xsl:map-entry key="'CWCM'" select="true()"/>
+               <xsl:map-entry key="'CWT'" select="true()"/>
+               <xsl:map-entry key="'CWU'" select="true()"/>
+               <xsl:map-entry key="'dt'" select="'None'"/>
+               <xsl:map-entry key="'ea'" select="'Na'"/>
+               <xsl:map-entry key="'gc'" select="'Ll'"/>
+               <xsl:map-entry key="'GCB'" select="'XX'"/>
+               <xsl:map-entry key="'Gr_Base'" select="true()"/>
+               <xsl:map-entry key="'IDC'" select="true()"/>
+               <xsl:map-entry key="'IDS'" select="true()"/>
+               <xsl:map-entry key="'lb'" select="'AL'"/>
+               <xsl:map-entry key="'Lower'" select="true()"/>
+               <xsl:map-entry key="'na'" select="'LATIN SMALL LETTER O'"/>
+               <xsl:map-entry key="'SB'" select="'LO'"/>
+               <xsl:map-entry key="'sc'" select="'Latn'"/>
+               <xsl:map-entry key="'scx'" select="'Latn'"/>
+               <xsl:map-entry key="'stc'" select="79"/>
+               <xsl:map-entry key="'suc'" select="79"/>
+               <xsl:map-entry key="'tc'" select="79"/>
+               <xsl:map-entry key="'uc'" select="79"/>
+               <xsl:map-entry key="'WB'" select="'LE'"/>
+               <xsl:map-entry key="'XIDC'" select="true()"/>
+               <xsl:map-entry key="'XIDS'" select="true()"/>
+            </xsl:map>
+         </xsl:map-entry>
+         <xsl:map-entry use-when="$codepoints-of-interest = 112" key="112">
+            <xsl:map>
+               <xsl:map-entry key="'Alpha'" select="true()"/>
+               <xsl:map-entry key="'bc'" select="'L'"/>
+               <xsl:map-entry key="'Cased'" select="true()"/>
+               <xsl:map-entry key="'CWCM'" select="true()"/>
+               <xsl:map-entry key="'CWT'" select="true()"/>
+               <xsl:map-entry key="'CWU'" select="true()"/>
+               <xsl:map-entry key="'dt'" select="'None'"/>
+               <xsl:map-entry key="'ea'" select="'Na'"/>
+               <xsl:map-entry key="'gc'" select="'Ll'"/>
+               <xsl:map-entry key="'GCB'" select="'XX'"/>
+               <xsl:map-entry key="'Gr_Base'" select="true()"/>
+               <xsl:map-entry key="'IDC'" select="true()"/>
+               <xsl:map-entry key="'IDS'" select="true()"/>
+               <xsl:map-entry key="'lb'" select="'AL'"/>
+               <xsl:map-entry key="'Lower'" select="true()"/>
+               <xsl:map-entry key="'na'" select="'LATIN SMALL LETTER P'"/>
+               <xsl:map-entry key="'SB'" select="'LO'"/>
+               <xsl:map-entry key="'sc'" select="'Latn'"/>
+               <xsl:map-entry key="'scx'" select="'Latn'"/>
+               <xsl:map-entry key="'stc'" select="80"/>
+               <xsl:map-entry key="'suc'" select="80"/>
+               <xsl:map-entry key="'tc'" select="80"/>
+               <xsl:map-entry key="'uc'" select="80"/>
+               <xsl:map-entry key="'WB'" select="'LE'"/>
+               <xsl:map-entry key="'XIDC'" select="true()"/>
+               <xsl:map-entry key="'XIDS'" select="true()"/>
+            </xsl:map>
+         </xsl:map-entry>
+         <xsl:map-entry use-when="$codepoints-of-interest = 113" key="113">
+            <xsl:map>
+               <xsl:map-entry key="'Alpha'" select="true()"/>
+               <xsl:map-entry key="'bc'" select="'L'"/>
+               <xsl:map-entry key="'Cased'" select="true()"/>
+               <xsl:map-entry key="'CWCM'" select="true()"/>
+               <xsl:map-entry key="'CWT'" select="true()"/>
+               <xsl:map-entry key="'CWU'" select="true()"/>
+               <xsl:map-entry key="'dt'" select="'None'"/>
+               <xsl:map-entry key="'ea'" select="'Na'"/>
+               <xsl:map-entry key="'gc'" select="'Ll'"/>
+               <xsl:map-entry key="'GCB'" select="'XX'"/>
+               <xsl:map-entry key="'Gr_Base'" select="true()"/>
+               <xsl:map-entry key="'IDC'" select="true()"/>
+               <xsl:map-entry key="'IDS'" select="true()"/>
+               <xsl:map-entry key="'lb'" select="'AL'"/>
+               <xsl:map-entry key="'Lower'" select="true()"/>
+               <xsl:map-entry key="'na'" select="'LATIN SMALL LETTER Q'"/>
+               <xsl:map-entry key="'SB'" select="'LO'"/>
+               <xsl:map-entry key="'sc'" select="'Latn'"/>
+               <xsl:map-entry key="'scx'" select="'Latn'"/>
+               <xsl:map-entry key="'stc'" select="81"/>
+               <xsl:map-entry key="'suc'" select="81"/>
+               <xsl:map-entry key="'tc'" select="81"/>
+               <xsl:map-entry key="'uc'" select="81"/>
+               <xsl:map-entry key="'WB'" select="'LE'"/>
+               <xsl:map-entry key="'XIDC'" select="true()"/>
+               <xsl:map-entry key="'XIDS'" select="true()"/>
+            </xsl:map>
+         </xsl:map-entry>
+         <xsl:map-entry use-when="$codepoints-of-interest = 114" key="114">
+            <xsl:map>
+               <xsl:map-entry key="'Alpha'" select="true()"/>
+               <xsl:map-entry key="'bc'" select="'L'"/>
+               <xsl:map-entry key="'Cased'" select="true()"/>
+               <xsl:map-entry key="'CWCM'" select="true()"/>
+               <xsl:map-entry key="'CWT'" select="true()"/>
+               <xsl:map-entry key="'CWU'" select="true()"/>
+               <xsl:map-entry key="'dt'" select="'None'"/>
+               <xsl:map-entry key="'ea'" select="'Na'"/>
+               <xsl:map-entry key="'gc'" select="'Ll'"/>
+               <xsl:map-entry key="'GCB'" select="'XX'"/>
+               <xsl:map-entry key="'Gr_Base'" select="true()"/>
+               <xsl:map-entry key="'IDC'" select="true()"/>
+               <xsl:map-entry key="'IDS'" select="true()"/>
+               <xsl:map-entry key="'lb'" select="'AL'"/>
+               <xsl:map-entry key="'Lower'" select="true()"/>
+               <xsl:map-entry key="'na'" select="'LATIN SMALL LETTER R'"/>
+               <xsl:map-entry key="'SB'" select="'LO'"/>
+               <xsl:map-entry key="'sc'" select="'Latn'"/>
+               <xsl:map-entry key="'scx'" select="'Latn'"/>
+               <xsl:map-entry key="'stc'" select="82"/>
+               <xsl:map-entry key="'suc'" select="82"/>
+               <xsl:map-entry key="'tc'" select="82"/>
+               <xsl:map-entry key="'uc'" select="82"/>
+               <xsl:map-entry key="'WB'" select="'LE'"/>
+               <xsl:map-entry key="'XIDC'" select="true()"/>
+               <xsl:map-entry key="'XIDS'" select="true()"/>
+            </xsl:map>
+         </xsl:map-entry>
+         <xsl:map-entry use-when="$codepoints-of-interest = 115" key="115">
+            <xsl:map>
+               <xsl:map-entry key="'Alpha'" select="true()"/>
+               <xsl:map-entry key="'bc'" select="'L'"/>
+               <xsl:map-entry key="'Cased'" select="true()"/>
+               <xsl:map-entry key="'CWCM'" select="true()"/>
+               <xsl:map-entry key="'CWT'" select="true()"/>
+               <xsl:map-entry key="'CWU'" select="true()"/>
+               <xsl:map-entry key="'dt'" select="'None'"/>
+               <xsl:map-entry key="'ea'" select="'Na'"/>
+               <xsl:map-entry key="'gc'" select="'Ll'"/>
+               <xsl:map-entry key="'GCB'" select="'XX'"/>
+               <xsl:map-entry key="'Gr_Base'" select="true()"/>
+               <xsl:map-entry key="'IDC'" select="true()"/>
+               <xsl:map-entry key="'IDS'" select="true()"/>
+               <xsl:map-entry key="'lb'" select="'AL'"/>
+               <xsl:map-entry key="'Lower'" select="true()"/>
+               <xsl:map-entry key="'na'" select="'LATIN SMALL LETTER S'"/>
+               <xsl:map-entry key="'SB'" select="'LO'"/>
+               <xsl:map-entry key="'sc'" select="'Latn'"/>
+               <xsl:map-entry key="'scx'" select="'Latn'"/>
+               <xsl:map-entry key="'stc'" select="83"/>
+               <xsl:map-entry key="'suc'" select="83"/>
+               <xsl:map-entry key="'tc'" select="83"/>
+               <xsl:map-entry key="'uc'" select="83"/>
+               <xsl:map-entry key="'WB'" select="'LE'"/>
+               <xsl:map-entry key="'XIDC'" select="true()"/>
+               <xsl:map-entry key="'XIDS'" select="true()"/>
+            </xsl:map>
+         </xsl:map-entry>
+         <xsl:map-entry use-when="$codepoints-of-interest = 116" key="116">
+            <xsl:map>
+               <xsl:map-entry key="'Alpha'" select="true()"/>
+               <xsl:map-entry key="'bc'" select="'L'"/>
+               <xsl:map-entry key="'Cased'" select="true()"/>
+               <xsl:map-entry key="'CWCM'" select="true()"/>
+               <xsl:map-entry key="'CWT'" select="true()"/>
+               <xsl:map-entry key="'CWU'" select="true()"/>
+               <xsl:map-entry key="'dt'" select="'None'"/>
+               <xsl:map-entry key="'ea'" select="'Na'"/>
+               <xsl:map-entry key="'gc'" select="'Ll'"/>
+               <xsl:map-entry key="'GCB'" select="'XX'"/>
+               <xsl:map-entry key="'Gr_Base'" select="true()"/>
+               <xsl:map-entry key="'IDC'" select="true()"/>
+               <xsl:map-entry key="'IDS'" select="true()"/>
+               <xsl:map-entry key="'lb'" select="'AL'"/>
+               <xsl:map-entry key="'Lower'" select="true()"/>
+               <xsl:map-entry key="'na'" select="'LATIN SMALL LETTER T'"/>
+               <xsl:map-entry key="'SB'" select="'LO'"/>
+               <xsl:map-entry key="'sc'" select="'Latn'"/>
+               <xsl:map-entry key="'scx'" select="'Latn'"/>
+               <xsl:map-entry key="'stc'" select="84"/>
+               <xsl:map-entry key="'suc'" select="84"/>
+               <xsl:map-entry key="'tc'" select="84"/>
+               <xsl:map-entry key="'uc'" select="84"/>
+               <xsl:map-entry key="'WB'" select="'LE'"/>
+               <xsl:map-entry key="'XIDC'" select="true()"/>
+               <xsl:map-entry key="'XIDS'" select="true()"/>
+            </xsl:map>
+         </xsl:map-entry>
+         <xsl:map-entry use-when="$codepoints-of-interest = 117" key="117">
+            <xsl:map>
+               <xsl:map-entry key="'Alpha'" select="true()"/>
+               <xsl:map-entry key="'bc'" select="'L'"/>
+               <xsl:map-entry key="'Cased'" select="true()"/>
+               <xsl:map-entry key="'CWCM'" select="true()"/>
+               <xsl:map-entry key="'CWT'" select="true()"/>
+               <xsl:map-entry key="'CWU'" select="true()"/>
+               <xsl:map-entry key="'dt'" select="'None'"/>
+               <xsl:map-entry key="'ea'" select="'Na'"/>
+               <xsl:map-entry key="'gc'" select="'Ll'"/>
+               <xsl:map-entry key="'GCB'" select="'XX'"/>
+               <xsl:map-entry key="'Gr_Base'" select="true()"/>
+               <xsl:map-entry key="'IDC'" select="true()"/>
+               <xsl:map-entry key="'IDS'" select="true()"/>
+               <xsl:map-entry key="'lb'" select="'AL'"/>
+               <xsl:map-entry key="'Lower'" select="true()"/>
+               <xsl:map-entry key="'na'" select="'LATIN SMALL LETTER U'"/>
+               <xsl:map-entry key="'SB'" select="'LO'"/>
+               <xsl:map-entry key="'sc'" select="'Latn'"/>
+               <xsl:map-entry key="'scx'" select="'Latn'"/>
+               <xsl:map-entry key="'stc'" select="85"/>
+               <xsl:map-entry key="'suc'" select="85"/>
+               <xsl:map-entry key="'tc'" select="85"/>
+               <xsl:map-entry key="'uc'" select="85"/>
+               <xsl:map-entry key="'WB'" select="'LE'"/>
+               <xsl:map-entry key="'XIDC'" select="true()"/>
+               <xsl:map-entry key="'XIDS'" select="true()"/>
+            </xsl:map>
+         </xsl:map-entry>
+         <xsl:map-entry use-when="$codepoints-of-interest = 118" key="118">
+            <xsl:map>
+               <xsl:map-entry key="'Alpha'" select="true()"/>
+               <xsl:map-entry key="'bc'" select="'L'"/>
+               <xsl:map-entry key="'Cased'" select="true()"/>
+               <xsl:map-entry key="'CWCM'" select="true()"/>
+               <xsl:map-entry key="'CWT'" select="true()"/>
+               <xsl:map-entry key="'CWU'" select="true()"/>
+               <xsl:map-entry key="'dt'" select="'None'"/>
+               <xsl:map-entry key="'ea'" select="'Na'"/>
+               <xsl:map-entry key="'gc'" select="'Ll'"/>
+               <xsl:map-entry key="'GCB'" select="'XX'"/>
+               <xsl:map-entry key="'Gr_Base'" select="true()"/>
+               <xsl:map-entry key="'IDC'" select="true()"/>
+               <xsl:map-entry key="'IDS'" select="true()"/>
+               <xsl:map-entry key="'lb'" select="'AL'"/>
+               <xsl:map-entry key="'Lower'" select="true()"/>
+               <xsl:map-entry key="'na'" select="'LATIN SMALL LETTER V'"/>
+               <xsl:map-entry key="'SB'" select="'LO'"/>
+               <xsl:map-entry key="'sc'" select="'Latn'"/>
+               <xsl:map-entry key="'scx'" select="'Latn'"/>
+               <xsl:map-entry key="'stc'" select="86"/>
+               <xsl:map-entry key="'suc'" select="86"/>
+               <xsl:map-entry key="'tc'" select="86"/>
+               <xsl:map-entry key="'uc'" select="86"/>
+               <xsl:map-entry key="'WB'" select="'LE'"/>
+               <xsl:map-entry key="'XIDC'" select="true()"/>
+               <xsl:map-entry key="'XIDS'" select="true()"/>
+            </xsl:map>
+         </xsl:map-entry>
+         <xsl:map-entry use-when="$codepoints-of-interest = 119" key="119">
+            <xsl:map>
+               <xsl:map-entry key="'Alpha'" select="true()"/>
+               <xsl:map-entry key="'bc'" select="'L'"/>
+               <xsl:map-entry key="'Cased'" select="true()"/>
+               <xsl:map-entry key="'CWCM'" select="true()"/>
+               <xsl:map-entry key="'CWT'" select="true()"/>
+               <xsl:map-entry key="'CWU'" select="true()"/>
+               <xsl:map-entry key="'dt'" select="'None'"/>
+               <xsl:map-entry key="'ea'" select="'Na'"/>
+               <xsl:map-entry key="'gc'" select="'Ll'"/>
+               <xsl:map-entry key="'GCB'" select="'XX'"/>
+               <xsl:map-entry key="'Gr_Base'" select="true()"/>
+               <xsl:map-entry key="'IDC'" select="true()"/>
+               <xsl:map-entry key="'IDS'" select="true()"/>
+               <xsl:map-entry key="'lb'" select="'AL'"/>
+               <xsl:map-entry key="'Lower'" select="true()"/>
+               <xsl:map-entry key="'na'" select="'LATIN SMALL LETTER W'"/>
+               <xsl:map-entry key="'SB'" select="'LO'"/>
+               <xsl:map-entry key="'sc'" select="'Latn'"/>
+               <xsl:map-entry key="'scx'" select="'Latn'"/>
+               <xsl:map-entry key="'stc'" select="87"/>
+               <xsl:map-entry key="'suc'" select="87"/>
+               <xsl:map-entry key="'tc'" select="87"/>
+               <xsl:map-entry key="'uc'" select="87"/>
+               <xsl:map-entry key="'WB'" select="'LE'"/>
+               <xsl:map-entry key="'XIDC'" select="true()"/>
+               <xsl:map-entry key="'XIDS'" select="true()"/>
+            </xsl:map>
+         </xsl:map-entry>
+         <xsl:map-entry use-when="$codepoints-of-interest = 120" key="120">
+            <xsl:map>
+               <xsl:map-entry key="'Alpha'" select="true()"/>
+               <xsl:map-entry key="'bc'" select="'L'"/>
+               <xsl:map-entry key="'Cased'" select="true()"/>
+               <xsl:map-entry key="'CWCM'" select="true()"/>
+               <xsl:map-entry key="'CWT'" select="true()"/>
+               <xsl:map-entry key="'CWU'" select="true()"/>
+               <xsl:map-entry key="'dt'" select="'None'"/>
+               <xsl:map-entry key="'ea'" select="'Na'"/>
+               <xsl:map-entry key="'gc'" select="'Ll'"/>
+               <xsl:map-entry key="'GCB'" select="'XX'"/>
+               <xsl:map-entry key="'Gr_Base'" select="true()"/>
+               <xsl:map-entry key="'IDC'" select="true()"/>
+               <xsl:map-entry key="'IDS'" select="true()"/>
+               <xsl:map-entry key="'lb'" select="'AL'"/>
+               <xsl:map-entry key="'Lower'" select="true()"/>
+               <xsl:map-entry key="'na'" select="'LATIN SMALL LETTER X'"/>
+               <xsl:map-entry key="'SB'" select="'LO'"/>
+               <xsl:map-entry key="'sc'" select="'Latn'"/>
+               <xsl:map-entry key="'scx'" select="'Latn'"/>
+               <xsl:map-entry key="'stc'" select="88"/>
+               <xsl:map-entry key="'suc'" select="88"/>
+               <xsl:map-entry key="'tc'" select="88"/>
+               <xsl:map-entry key="'uc'" select="88"/>
+               <xsl:map-entry key="'WB'" select="'LE'"/>
+               <xsl:map-entry key="'XIDC'" select="true()"/>
+               <xsl:map-entry key="'XIDS'" select="true()"/>
+            </xsl:map>
+         </xsl:map-entry>
+         <xsl:map-entry use-when="$codepoints-of-interest = 121" key="121">
+            <xsl:map>
+               <xsl:map-entry key="'Alpha'" select="true()"/>
+               <xsl:map-entry key="'bc'" select="'L'"/>
+               <xsl:map-entry key="'Cased'" select="true()"/>
+               <xsl:map-entry key="'CWCM'" select="true()"/>
+               <xsl:map-entry key="'CWT'" select="true()"/>
+               <xsl:map-entry key="'CWU'" select="true()"/>
+               <xsl:map-entry key="'dt'" select="'None'"/>
+               <xsl:map-entry key="'ea'" select="'Na'"/>
+               <xsl:map-entry key="'gc'" select="'Ll'"/>
+               <xsl:map-entry key="'GCB'" select="'XX'"/>
+               <xsl:map-entry key="'Gr_Base'" select="true()"/>
+               <xsl:map-entry key="'IDC'" select="true()"/>
+               <xsl:map-entry key="'IDS'" select="true()"/>
+               <xsl:map-entry key="'lb'" select="'AL'"/>
+               <xsl:map-entry key="'Lower'" select="true()"/>
+               <xsl:map-entry key="'na'" select="'LATIN SMALL LETTER Y'"/>
+               <xsl:map-entry key="'SB'" select="'LO'"/>
+               <xsl:map-entry key="'sc'" select="'Latn'"/>
+               <xsl:map-entry key="'scx'" select="'Latn'"/>
+               <xsl:map-entry key="'stc'" select="89"/>
+               <xsl:map-entry key="'suc'" select="89"/>
+               <xsl:map-entry key="'tc'" select="89"/>
+               <xsl:map-entry key="'uc'" select="89"/>
+               <xsl:map-entry key="'WB'" select="'LE'"/>
+               <xsl:map-entry key="'XIDC'" select="true()"/>
+               <xsl:map-entry key="'XIDS'" select="true()"/>
+            </xsl:map>
+         </xsl:map-entry>
+         <xsl:map-entry use-when="$codepoints-of-interest = 122" key="122">
+            <xsl:map>
+               <xsl:map-entry key="'Alpha'" select="true()"/>
+               <xsl:map-entry key="'bc'" select="'L'"/>
+               <xsl:map-entry key="'Cased'" select="true()"/>
+               <xsl:map-entry key="'CWCM'" select="true()"/>
+               <xsl:map-entry key="'CWT'" select="true()"/>
+               <xsl:map-entry key="'CWU'" select="true()"/>
+               <xsl:map-entry key="'dt'" select="'None'"/>
+               <xsl:map-entry key="'ea'" select="'Na'"/>
+               <xsl:map-entry key="'gc'" select="'Ll'"/>
+               <xsl:map-entry key="'GCB'" select="'XX'"/>
+               <xsl:map-entry key="'Gr_Base'" select="true()"/>
+               <xsl:map-entry key="'IDC'" select="true()"/>
+               <xsl:map-entry key="'IDS'" select="true()"/>
+               <xsl:map-entry key="'lb'" select="'AL'"/>
+               <xsl:map-entry key="'Lower'" select="true()"/>
+               <xsl:map-entry key="'na'" select="'LATIN SMALL LETTER Z'"/>
+               <xsl:map-entry key="'SB'" select="'LO'"/>
+               <xsl:map-entry key="'sc'" select="'Latn'"/>
+               <xsl:map-entry key="'scx'" select="'Latn'"/>
+               <xsl:map-entry key="'stc'" select="90"/>
+               <xsl:map-entry key="'suc'" select="90"/>
+               <xsl:map-entry key="'tc'" select="90"/>
+               <xsl:map-entry key="'uc'" select="90"/>
+               <xsl:map-entry key="'WB'" select="'LE'"/>
+               <xsl:map-entry key="'XIDC'" select="true()"/>
+               <xsl:map-entry key="'XIDS'" select="true()"/>
+            </xsl:map>
+         </xsl:map-entry>
+         <xsl:map-entry use-when="$codepoints-of-interest = 123" key="123">
+            <xsl:map>
+               <xsl:map-entry key="'bc'" select="'ON'"/>
+               <xsl:map-entry key="'Bidi_M'" select="true()"/>
+               <xsl:map-entry key="'bmg'" select="125"/>
+               <xsl:map-entry key="'bpb'" select="125"/>
+               <xsl:map-entry key="'bpt'" select="'o'"/>
+               <xsl:map-entry key="'dt'" select="'None'"/>
+               <xsl:map-entry key="'ea'" select="'Na'"/>
+               <xsl:map-entry key="'gc'" select="'Ps'"/>
+               <xsl:map-entry key="'GCB'" select="'XX'"/>
+               <xsl:map-entry key="'Gr_Base'" select="true()"/>
+               <xsl:map-entry key="'lb'" select="'OP'"/>
+               <xsl:map-entry key="'na'" select="'LEFT CURLY BRACKET'"/>
+               <xsl:map-entry key="'na1'" select="'OPENING CURLY BRACKET'"/>
+               <xsl:map-entry key="'Pat_Syn'" select="true()"/>
+               <xsl:map-entry key="'SB'" select="'CL'"/>
+               <xsl:map-entry key="'scx'" select="'Zyyy'"/>
+            </xsl:map>
+         </xsl:map-entry>
+         <xsl:map-entry use-when="$codepoints-of-interest = 124" key="124">
+            <xsl:map>
+               <xsl:map-entry key="'bc'" select="'ON'"/>
+               <xsl:map-entry key="'dt'" select="'None'"/>
+               <xsl:map-entry key="'ea'" select="'Na'"/>
+               <xsl:map-entry key="'gc'" select="'Sm'"/>
+               <xsl:map-entry key="'GCB'" select="'XX'"/>
+               <xsl:map-entry key="'Gr_Base'" select="true()"/>
+               <xsl:map-entry key="'lb'" select="'BA'"/>
+               <xsl:map-entry key="'Math'" select="true()"/>
+               <xsl:map-entry key="'na'" select="'VERTICAL LINE'"/>
+               <xsl:map-entry key="'na1'" select="'VERTICAL BAR'"/>
+               <xsl:map-entry key="'Pat_Syn'" select="true()"/>
+               <xsl:map-entry key="'scx'" select="'Zyyy'"/>
+            </xsl:map>
+         </xsl:map-entry>
+         <xsl:map-entry use-when="$codepoints-of-interest = 125" key="125">
+            <xsl:map>
+               <xsl:map-entry key="'bc'" select="'ON'"/>
+               <xsl:map-entry key="'Bidi_M'" select="true()"/>
+               <xsl:map-entry key="'bmg'" select="123"/>
+               <xsl:map-entry key="'bpb'" select="123"/>
+               <xsl:map-entry key="'bpt'" select="'c'"/>
+               <xsl:map-entry key="'dt'" select="'None'"/>
+               <xsl:map-entry key="'ea'" select="'Na'"/>
+               <xsl:map-entry key="'gc'" select="'Pe'"/>
+               <xsl:map-entry key="'GCB'" select="'XX'"/>
+               <xsl:map-entry key="'Gr_Base'" select="true()"/>
+               <xsl:map-entry key="'lb'" select="'CL'"/>
+               <xsl:map-entry key="'na'" select="'RIGHT CURLY BRACKET'"/>
+               <xsl:map-entry key="'na1'" select="'CLOSING CURLY BRACKET'"/>
+               <xsl:map-entry key="'Pat_Syn'" select="true()"/>
+               <xsl:map-entry key="'SB'" select="'CL'"/>
+               <xsl:map-entry key="'scx'" select="'Zyyy'"/>
+            </xsl:map>
+         </xsl:map-entry>
+         <xsl:map-entry use-when="$codepoints-of-interest = 126" key="126">
+            <xsl:map>
+               <xsl:map-entry key="'bc'" select="'ON'"/>
+               <xsl:map-entry key="'dt'" select="'None'"/>
+               <xsl:map-entry key="'ea'" select="'Na'"/>
+               <xsl:map-entry key="'gc'" select="'Sm'"/>
+               <xsl:map-entry key="'GCB'" select="'XX'"/>
+               <xsl:map-entry key="'Gr_Base'" select="true()"/>
+               <xsl:map-entry key="'lb'" select="'AL'"/>
+               <xsl:map-entry key="'Math'" select="true()"/>
+               <xsl:map-entry key="'na'" select="'TILDE'"/>
+               <xsl:map-entry key="'Pat_Syn'" select="true()"/>
+               <xsl:map-entry key="'scx'" select="'Zyyy'"/>
+            </xsl:map>
+         </xsl:map-entry>
+         <xsl:map-entry use-when="$codepoints-of-interest = 127" key="127">
+            <xsl:map>
+               <xsl:map-entry key="'dt'" select="'None'"/>
+               <xsl:map-entry key="'na1'" select="'DELETE'"/>
+               <xsl:map-entry key="'scx'" select="'Zyyy'"/>
+            </xsl:map>
+         </xsl:map-entry>
+         <xsl:map-entry use-when="$codepoints-of-interest = 143" key="143">
+            <xsl:map>
+               <xsl:map-entry key="'blk'" select="'Latin_1_Sup'"/>
+               <xsl:map-entry key="'dt'" select="'None'"/>
+               <xsl:map-entry key="'na1'" select="'SINGLE SHIFT THREE'"/>
+               <xsl:map-entry key="'scx'" select="'Zyyy'"/>
+            </xsl:map>
+         </xsl:map-entry>
+         <xsl:map-entry use-when="$codepoints-of-interest = 163" key="163">
+            <xsl:map>
+               <xsl:map-entry key="'bc'" select="'ET'"/>
+               <xsl:map-entry key="'blk'" select="'Latin_1_Sup'"/>
+               <xsl:map-entry key="'dt'" select="'None'"/>
+               <xsl:map-entry key="'ea'" select="'Na'"/>
+               <xsl:map-entry key="'gc'" select="'Sc'"/>
+               <xsl:map-entry key="'GCB'" select="'XX'"/>
+               <xsl:map-entry key="'Gr_Base'" select="true()"/>
+               <xsl:map-entry key="'lb'" select="'PR'"/>
+               <xsl:map-entry key="'na'" select="'POUND SIGN'"/>
+               <xsl:map-entry key="'Pat_Syn'" select="true()"/>
+               <xsl:map-entry key="'scx'" select="'Zyyy'"/>
+            </xsl:map>
+         </xsl:map-entry>
+         <xsl:map-entry use-when="$codepoints-of-interest = 288" key="288">
+            <xsl:map>
+               <xsl:map-entry key="'Alpha'" select="true()"/>
+               <xsl:map-entry key="'bc'" select="'L'"/>
+               <xsl:map-entry key="'blk'" select="'Latin_Ext_A'"/>
+               <xsl:map-entry key="'Cased'" select="true()"/>
+               <xsl:map-entry key="'cf'" select="289"/>
+               <xsl:map-entry key="'CWCF'" select="true()"/>
+               <xsl:map-entry key="'CWCM'" select="true()"/>
+               <xsl:map-entry key="'CWKCF'" select="true()"/>
+               <xsl:map-entry key="'CWL'" select="true()"/>
+               <xsl:map-entry key="'dm'" select="71, 775"/>
+               <xsl:map-entry key="'dt'" select="'Can'"/>
+               <xsl:map-entry key="'gc'" select="'Lu'"/>
+               <xsl:map-entry key="'GCB'" select="'XX'"/>
+               <xsl:map-entry key="'Gr_Base'" select="true()"/>
+               <xsl:map-entry key="'IDC'" select="true()"/>
+               <xsl:map-entry key="'IDS'" select="true()"/>
+               <xsl:map-entry key="'lb'" select="'AL'"/>
+               <xsl:map-entry key="'lc'" select="289"/>
+               <xsl:map-entry key="'na'" select="'LATIN CAPITAL LETTER G WITH DOT ABOVE'"/>
+               <xsl:map-entry key="'na1'" select="'LATIN CAPITAL LETTER G DOT'"/>
+               <xsl:map-entry key="'NFD_QC'" select="'N'"/>
+               <xsl:map-entry key="'NFKC_CF'" select="289"/>
+               <xsl:map-entry key="'NFKC_SCF'" select="289"/>
+               <xsl:map-entry key="'NFKD_QC'" select="'N'"/>
+               <xsl:map-entry key="'SB'" select="'UP'"/>
+               <xsl:map-entry key="'sc'" select="'Latn'"/>
+               <xsl:map-entry key="'scf'" select="289"/>
+               <xsl:map-entry key="'scx'" select="'Latn'"/>
+               <xsl:map-entry key="'slc'" select="289"/>
+               <xsl:map-entry key="'Upper'" select="true()"/>
+               <xsl:map-entry key="'WB'" select="'LE'"/>
+               <xsl:map-entry key="'XIDC'" select="true()"/>
+               <xsl:map-entry key="'XIDS'" select="true()"/>
+            </xsl:map>
+         </xsl:map-entry>
+         <xsl:map-entry use-when="$codepoints-of-interest = 768" key="768">
+            <xsl:map>
+               <xsl:map-entry key="'bc'" select="'NSM'"/>
+               <xsl:map-entry key="'blk'" select="'Diacriticals'"/>
+               <xsl:map-entry key="'ccc'" select="'230'"/>
+               <xsl:map-entry key="'CI'" select="true()"/>
+               <xsl:map-entry key="'Dia'" select="true()"/>
+               <xsl:map-entry key="'dt'" select="'None'"/>
+               <xsl:map-entry key="'ea'" select="'A'"/>
+               <xsl:map-entry key="'gc'" select="'Mn'"/>
+               <xsl:map-entry key="'GCB'" select="'EX'"/>
+               <xsl:map-entry key="'Gr_Ext'" select="true()"/>
+               <xsl:map-entry key="'IDC'" select="true()"/>
+               <xsl:map-entry key="'InCB'" select="'Extend'"/>
+               <xsl:map-entry key="'jt'" select="'T'"/>
+               <xsl:map-entry key="'na'" select="'COMBINING GRAVE ACCENT'"/>
+               <xsl:map-entry key="'na1'" select="'NON-SPACING GRAVE'"/>
+               <xsl:map-entry key="'NFC_QC'" select="'M'"/>
+               <xsl:map-entry key="'NFKC_QC'" select="'M'"/>
+               <xsl:map-entry key="'SB'" select="'EX'"/>
+               <xsl:map-entry key="'sc'" select="'Zinh'"/>
+               <xsl:map-entry key="'scx'" select="'Zinh'"/>
+               <xsl:map-entry key="'WB'" select="'Extend'"/>
+               <xsl:map-entry key="'XIDC'" select="true()"/>
+            </xsl:map>
+         </xsl:map-entry>
+         <xsl:map-entry use-when="$codepoints-of-interest = 1160" key="1160">
+            <xsl:map>
+               <xsl:map-entry key="'age'" select="'3.0'"/>
+               <xsl:map-entry key="'bc'" select="'NSM'"/>
+               <xsl:map-entry key="'blk'" select="'Cyrillic'"/>
+               <xsl:map-entry key="'CI'" select="true()"/>
+               <xsl:map-entry key="'dt'" select="'None'"/>
+               <xsl:map-entry key="'gc'" select="'Me'"/>
+               <xsl:map-entry key="'GCB'" select="'EX'"/>
+               <xsl:map-entry key="'Gr_Ext'" select="true()"/>
+               <xsl:map-entry key="'jt'" select="'T'"/>
+               <xsl:map-entry key="'na'" select="'COMBINING CYRILLIC HUNDRED THOUSANDS SIGN'"/>
+               <xsl:map-entry key="'SB'" select="'EX'"/>
+               <xsl:map-entry key="'sc'" select="'Cyrl'"/>
+               <xsl:map-entry key="'scx'" select="'Cyrl'"/>
+               <xsl:map-entry key="'WB'" select="'Extend'"/>
+            </xsl:map>
+         </xsl:map-entry>
+         <xsl:map-entry use-when="$codepoints-of-interest = 1641" key="1641">
+            <xsl:map>
+               <xsl:map-entry key="'bc'" select="'AN'"/>
+               <xsl:map-entry key="'blk'" select="'Arabic'"/>
+               <xsl:map-entry key="'dt'" select="'None'"/>
+               <xsl:map-entry key="'gc'" select="'Nd'"/>
+               <xsl:map-entry key="'GCB'" select="'XX'"/>
+               <xsl:map-entry key="'Gr_Base'" select="true()"/>
+               <xsl:map-entry key="'IDC'" select="true()"/>
+               <xsl:map-entry key="'lb'" select="'NU'"/>
+               <xsl:map-entry key="'na'" select="'ARABIC-INDIC DIGIT NINE'"/>
+               <xsl:map-entry key="'nt'" select="'De'"/>
+               <xsl:map-entry key="'nv'" select="'9'"/>
+               <xsl:map-entry key="'SB'" select="'NU'"/>
+               <xsl:map-entry key="'sc'" select="'Arab'"/>
+               <xsl:map-entry key="'scx'" select="'Arab Thaa Yezi'"/>
+               <xsl:map-entry key="'WB'" select="'NU'"/>
+               <xsl:map-entry key="'XIDC'" select="true()"/>
+            </xsl:map>
+         </xsl:map-entry>
+         <xsl:map-entry use-when="$codepoints-of-interest = 2418" key="2418">
+            <xsl:map>
+               <xsl:map-entry key="'age'" select="'5.1'"/>
+               <xsl:map-entry key="'Alpha'" select="true()"/>
+               <xsl:map-entry key="'bc'" select="'L'"/>
+               <xsl:map-entry key="'blk'" select="'Devanagari'"/>
+               <xsl:map-entry key="'dt'" select="'None'"/>
+               <xsl:map-entry key="'gc'" select="'Lo'"/>
+               <xsl:map-entry key="'GCB'" select="'XX'"/>
+               <xsl:map-entry key="'Gr_Base'" select="true()"/>
+               <xsl:map-entry key="'IDC'" select="true()"/>
+               <xsl:map-entry key="'IDS'" select="true()"/>
+               <xsl:map-entry key="'InSC'" select="'Vowel_Independent'"/>
+               <xsl:map-entry key="'lb'" select="'AL'"/>
+               <xsl:map-entry key="'na'" select="'DEVANAGARI LETTER CANDRA A'"/>
+               <xsl:map-entry key="'SB'" select="'LE'"/>
+               <xsl:map-entry key="'sc'" select="'Deva'"/>
+               <xsl:map-entry key="'scx'" select="'Deva'"/>
+               <xsl:map-entry key="'WB'" select="'LE'"/>
+               <xsl:map-entry key="'XIDC'" select="true()"/>
+               <xsl:map-entry key="'XIDS'" select="true()"/>
+            </xsl:map>
+         </xsl:map-entry>
+         <xsl:map-entry use-when="$codepoints-of-interest = 12994" key="12994">
+            <xsl:map>
+               <xsl:map-entry key="'bc'" select="'L'"/>
+               <xsl:map-entry key="'blk'" select="'Enclosed_CJK'"/>
+               <xsl:map-entry key="'CWKCF'" select="true()"/>
+               <xsl:map-entry key="'dm'" select="51, 26376"/>
+               <xsl:map-entry key="'dt'" select="'Com'"/>
+               <xsl:map-entry key="'ea'" select="'W'"/>
+               <xsl:map-entry key="'gc'" select="'So'"/>
+               <xsl:map-entry key="'GCB'" select="'XX'"/>
+               <xsl:map-entry key="'Gr_Base'" select="true()"/>
+               <xsl:map-entry key="'lb'" select="'ID'"/>
+               <xsl:map-entry key="'na'" select="'IDEOGRAPHIC TELEGRAPH SYMBOL FOR MARCH'"/>
+               <xsl:map-entry key="'NFKC_CF'" select="51, 26376"/>
+               <xsl:map-entry key="'NFKC_QC'" select="'N'"/>
+               <xsl:map-entry key="'NFKC_SCF'" select="51, 26376"/>
+               <xsl:map-entry key="'NFKD_QC'" select="'N'"/>
+               <xsl:map-entry key="'scx'" select="'Hani'"/>
+               <xsl:map-entry key="'vo'" select="'U'"/>
+            </xsl:map>
+         </xsl:map-entry>
+         <xsl:map-entry use-when="$codepoints-of-interest = 13122" key="13122">
+            <xsl:map>
+               <xsl:map-entry key="'bc'" select="'L'"/>
+               <xsl:map-entry key="'blk'" select="'CJK_Compat'"/>
+               <xsl:map-entry key="'CWKCF'" select="true()"/>
+               <xsl:map-entry key="'dm'" select="12507, 12540, 12531"/>
+               <xsl:map-entry key="'dt'" select="'Sqr'"/>
+               <xsl:map-entry key="'ea'" select="'W'"/>
+               <xsl:map-entry key="'gc'" select="'So'"/>
+               <xsl:map-entry key="'GCB'" select="'XX'"/>
+               <xsl:map-entry key="'Gr_Base'" select="true()"/>
+               <xsl:map-entry key="'lb'" select="'ID'"/>
+               <xsl:map-entry key="'na'" select="'SQUARE HOON'"/>
+               <xsl:map-entry key="'na1'" select="'SQUARED HOON'"/>
+               <xsl:map-entry key="'NFKC_CF'" select="12507, 12540, 12531"/>
+               <xsl:map-entry key="'NFKC_QC'" select="'N'"/>
+               <xsl:map-entry key="'NFKC_SCF'" select="12507, 12540, 12531"/>
+               <xsl:map-entry key="'NFKD_QC'" select="'N'"/>
+               <xsl:map-entry key="'sc'" select="'Kana'"/>
+               <xsl:map-entry key="'scx'" select="'Kana'"/>
+               <xsl:map-entry key="'vo'" select="'Tu'"/>
+               <xsl:map-entry key="'WB'" select="'KA'"/>
+            </xsl:map>
+         </xsl:map-entry>
+         <xsl:map-entry use-when="$codepoints-of-interest = 13378" key="13378">
+            <xsl:map>
+               <xsl:map-entry key="'age'" select="'3.0'"/>
+               <xsl:map-entry key="'Alpha'" select="true()"/>
+               <xsl:map-entry key="'bc'" select="'L'"/>
+               <xsl:map-entry key="'blk'" select="'CJK_Ext_A'"/>
+               <xsl:map-entry key="'dt'" select="'None'"/>
+               <xsl:map-entry key="'ea'" select="'W'"/>
+               <xsl:map-entry key="'gc'" select="'Lo'"/>
+               <xsl:map-entry key="'GCB'" select="'XX'"/>
+               <xsl:map-entry key="'Gr_Base'" select="true()"/>
+               <xsl:map-entry key="'IDC'" select="true()"/>
+               <xsl:map-entry key="'Ideo'" select="true()"/>
+               <xsl:map-entry key="'IDS'" select="true()"/>
+               <xsl:map-entry key="'kIRG_GSource'" select="'GKX-0096.19'"/>
+               <xsl:map-entry key="'kIRG_JSource'" select="'JA-212F'"/>
+               <xsl:map-entry key="'kIRG_TSource'" select="'T3-244A'"/>
+               <xsl:map-entry key="'kRSUnicode'" select="'9.5'"/>
+               <xsl:map-entry key="'lb'" select="'ID'"/>
+               <xsl:map-entry key="'na'" select="'CJK UNIFIED IDEOGRAPH-3442'"/>
+               <xsl:map-entry key="'SB'" select="'LE'"/>
+               <xsl:map-entry key="'sc'" select="'Hani'"/>
+               <xsl:map-entry key="'scx'" select="'Hani'"/>
+               <xsl:map-entry key="'UIdeo'" select="true()"/>
+               <xsl:map-entry key="'vo'" select="'U'"/>
+               <xsl:map-entry key="'XIDC'" select="true()"/>
+               <xsl:map-entry key="'XIDS'" select="true()"/>
+            </xsl:map>
+         </xsl:map-entry>
+         <xsl:map-entry use-when="$codepoints-of-interest = 50466" key="50466">
+            <xsl:map>
+               <xsl:map-entry key="'age'" select="'2.0'"/>
+               <xsl:map-entry key="'Alpha'" select="true()"/>
+               <xsl:map-entry key="'bc'" select="'L'"/>
+               <xsl:map-entry key="'blk'" select="'Hangul'"/>
+               <xsl:map-entry key="'dm'" select="50444, 4541"/>
+               <xsl:map-entry key="'dt'" select="'Can'"/>
+               <xsl:map-entry key="'ea'" select="'W'"/>
+               <xsl:map-entry key="'gc'" select="'Lo'"/>
+               <xsl:map-entry key="'GCB'" select="'LVT'"/>
+               <xsl:map-entry key="'Gr_Base'" select="true()"/>
+               <xsl:map-entry key="'hst'" select="'LVT'"/>
+               <xsl:map-entry key="'IDC'" select="true()"/>
+               <xsl:map-entry key="'IDS'" select="true()"/>
+               <xsl:map-entry key="'lb'" select="'H3'"/>
+               <xsl:map-entry key="'na'" select="'HANGUL SYLLABLE SSYIJ'"/>
+               <xsl:map-entry key="'NFD_QC'" select="'N'"/>
+               <xsl:map-entry key="'NFKD_QC'" select="'N'"/>
+               <xsl:map-entry key="'SB'" select="'LE'"/>
+               <xsl:map-entry key="'sc'" select="'Hang'"/>
+               <xsl:map-entry key="'scx'" select="'Hang'"/>
+               <xsl:map-entry key="'vo'" select="'U'"/>
+               <xsl:map-entry key="'WB'" select="'LE'"/>
+               <xsl:map-entry key="'XIDC'" select="true()"/>
+               <xsl:map-entry key="'XIDS'" select="true()"/>
+            </xsl:map>
+         </xsl:map-entry>
+         <xsl:map-entry use-when="$codepoints-of-interest = 132162" key="132162">
+            <xsl:map>
+               <xsl:map-entry key="'age'" select="'3.1'"/>
+               <xsl:map-entry key="'Alpha'" select="true()"/>
+               <xsl:map-entry key="'bc'" select="'L'"/>
+               <xsl:map-entry key="'blk'" select="'CJK_Ext_B'"/>
+               <xsl:map-entry key="'dt'" select="'None'"/>
+               <xsl:map-entry key="'ea'" select="'W'"/>
+               <xsl:map-entry key="'gc'" select="'Lo'"/>
+               <xsl:map-entry key="'GCB'" select="'XX'"/>
+               <xsl:map-entry key="'Gr_Base'" select="true()"/>
+               <xsl:map-entry key="'IDC'" select="true()"/>
+               <xsl:map-entry key="'Ideo'" select="true()"/>
+               <xsl:map-entry key="'IDS'" select="true()"/>
+               <xsl:map-entry key="'kIRG_GSource'" select="'GHZ-10237.05'"/>
+               <xsl:map-entry key="'kIRG_TSource'" select="'T7-476F'"/>
+               <xsl:map-entry key="'kRSUnicode'" select="'89.15'"/>
+               <xsl:map-entry key="'lb'" select="'ID'"/>
+               <xsl:map-entry key="'na'" select="'CJK UNIFIED IDEOGRAPH-20442'"/>
+               <xsl:map-entry key="'SB'" select="'LE'"/>
+               <xsl:map-entry key="'sc'" select="'Hani'"/>
+               <xsl:map-entry key="'scx'" select="'Hani'"/>
+               <xsl:map-entry key="'UIdeo'" select="true()"/>
+               <xsl:map-entry key="'vo'" select="'U'"/>
+               <xsl:map-entry key="'XIDC'" select="true()"/>
+               <xsl:map-entry key="'XIDS'" select="true()"/>
+            </xsl:map>
+         </xsl:map-entry>
+         <xsl:map-entry use-when="$codepoints-of-interest = 161282" key="161282">
+            <xsl:map>
+               <xsl:map-entry key="'age'" select="'3.1'"/>
+               <xsl:map-entry key="'Alpha'" select="true()"/>
+               <xsl:map-entry key="'bc'" select="'L'"/>
+               <xsl:map-entry key="'blk'" select="'CJK_Ext_B'"/>
+               <xsl:map-entry key="'dt'" select="'None'"/>
+               <xsl:map-entry key="'ea'" select="'W'"/>
+               <xsl:map-entry key="'gc'" select="'Lo'"/>
+               <xsl:map-entry key="'GCB'" select="'XX'"/>
+               <xsl:map-entry key="'Gr_Base'" select="true()"/>
+               <xsl:map-entry key="'IDC'" select="true()"/>
+               <xsl:map-entry key="'Ideo'" select="true()"/>
+               <xsl:map-entry key="'IDS'" select="true()"/>
+               <xsl:map-entry key="'kIRG_GSource'" select="'GKX-1110.17'"/>
+               <xsl:map-entry key="'kIRG_KPSource'" select="'KP1-7353'"/>
+               <xsl:map-entry key="'kIRG_TSource'" select="'T4-5D41'"/>
+               <xsl:map-entry key="'kRSUnicode'" select="'144.12'"/>
+               <xsl:map-entry key="'lb'" select="'ID'"/>
+               <xsl:map-entry key="'na'" select="'CJK UNIFIED IDEOGRAPH-27602'"/>
+               <xsl:map-entry key="'SB'" select="'LE'"/>
+               <xsl:map-entry key="'sc'" select="'Hani'"/>
+               <xsl:map-entry key="'scx'" select="'Hani'"/>
+               <xsl:map-entry key="'UIdeo'" select="true()"/>
+               <xsl:map-entry key="'vo'" select="'U'"/>
+               <xsl:map-entry key="'XIDC'" select="true()"/>
+               <xsl:map-entry key="'XIDS'" select="true()"/>
+            </xsl:map>
+         </xsl:map-entry>
       </xsl:map>
    </xsl:variable>
 </xsl:stylesheet>

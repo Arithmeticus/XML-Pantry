@@ -16,11 +16,14 @@
    <!-- Primary output: diagnostic tests -->
    <!-- Secondary output: none -->
    
-   <xsl:include href="../src/unicode-properties.xsl"/>
+   <xsl:param name="codepoints-of-interest" static="yes" as="xs:integer*" select="(1 to 127), 143, 163, 288, 768, 1160, 
+      1641, 2418, 12994, 13122, 
+      13378, 50466, 132162, 161282"/>
+   <xsl:import href="../src/unicode-properties.xsl"/>
    <!--<xsl:include href="../../../TAN/TAN-2022/functions/TAN-function-library.xsl"/>-->
    
    <xsl:output indent="yes"/>
-   <xsl:variable name="curr-codepoints-of-interest" as="xs:integer+" select="65, 91"/>
+   <xsl:variable name="curr-codepoints-of-interest" as="xs:integer+" select="65, 91, 161282"/>
    <xsl:variable name="maps-of-interest" as="map(*)*" select="$curr-codepoints-of-interest ! fn4:unicode-properties(.)"/>
    <xsl:template match="/">
       <diagnostics>

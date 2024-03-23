@@ -199,19 +199,6 @@
       
       
       <xsl:variable name="is-most-frequent" as="xs:boolean" select="(@class, @short)[1] = $most-frequent-value"/>
-      <!--<xsl:variable name="is-most-frequent" as="xs:boolean" select="
-         ($prop-type eq 'boolean' and @short = 'N')
-         or (ancestor::property/name = ('ea', 'NFC_QC', 'NFKC_QC') and @short = 'N')
-         or (ancestor::property/name = 'bpt' and @short = 'n')
-         or (ancestor::property/name = ('Age', 'hst', 'InPC') and @short = 'NA')
-         or (ancestor::property/name = ('dt', 'InCB', 'nt') and @short = 'None')
-         or (ancestor::property/name = ('InSC') and @short = 'Other')
-         or (ancestor::property/name = ('jg') and @short = 'No_Joining_Group')
-         or (ancestor::property/name = ('jt') and @short = 'Non_Joining')
-         or (ancestor::property/name = ('GCB', 'lb', 'SB', 'WB') and @short = 'XX')
-         or (ancestor::property/name = ('script') and @short = 'Zzzz')
-         or (ancestor::property/name = ('ccc') and @class = '0')
-         "/>-->
 
       <xsl:copy>
          <xsl:copy-of select="@*"/>
@@ -244,7 +231,10 @@
    
    <xsl:mode name="build-codepoint-map-entries" on-no-match="shallow-skip"/>
    
-   <xsl:variable name="build-only-these-codepoints-of-interest" as="xs:integer+" select="(1 to 99)"/>
+   
+   <!-- It can be time-consuming to build the map; this parameter allows us to select what codepoints to build. -->
+   <xsl:param name="build-only-these-codepoints-of-interest" as="xs:integer+" select="(1 to 127), 143, 163, 288, 768, 1160, 1641, 2418, 12994, 13122, 
+      13378, 50466, 132162, 161282"/>
    
    <xsl:template match="ucd:char[@cp]" mode="build-codepoint-map-entries">
       <xsl:variable name="cp" as="xs:integer" select="tan:hex-to-dec(@cp)"/>
@@ -253,9 +243,17 @@
             <xsl:attribute name="use-when" select="'$codepoints-of-interest = ' || $cp"/>
             <xsl:attribute name="key" select="$cp"/>
             <xsl:element name="xsl:map" namespace="http://www.w3.org/1999/XSL/Transform">
-               <xsl:apply-templates select="ancestor-or-self::*/@*[name(.) = $property-tree-pass-2//name]" mode="build-codepoint-submap-entries">
+               <xsl:apply-templates select="
+                     for $i in (ancestor-or-self::*/@* ! name(.) => distinct-values())[. = $property-tree-pass-2//name]
+                     return
+                        ancestor-or-self::*[@*[name(.) eq $i]][1]/@*[name(.) eq $i]"
+                  mode="build-codepoint-submap-entries">
                   <xsl:sort select="lower-case(name(.))"/>
+                  <xsl:with-param name="curr-cp-hex" as="xs:string" select="@cp" tunnel="yes"/>
                </xsl:apply-templates>
+               <!--<xsl:apply-templates select="ancestor-or-self::*/@*[name(.) = $property-tree-pass-2//name]" mode="build-codepoint-submap-entries">
+                  <xsl:sort select="lower-case(name(.))"/>
+               </xsl:apply-templates>-->
             </xsl:element>
          </xsl:element>
       </xsl:if>
@@ -264,34 +262,53 @@
    <xsl:mode name="build-codepoint-submap-entries" on-no-match="shallow-skip"/>
    
    <!-- Let ancestral attributes be overridden by their descendants -->
-   <!-- Ignore attributes with no value, or with the '#' (normally refers to the codepoint itself) -->
-   <xsl:template match="@*[string-length(.) lt 1] |
-      @*[. eq '#'] |
-         @*[some $i in ../descendant::*/@*
-            satisfies name($i) eq name(.)]" priority="1" mode="build-codepoint-submap-entries"/>
+   <!-- Ignore attributes with no value, or with the '#' (reflexive reference to the codepoint itself) -->
+   <xsl:template match="@*[string-length(.) lt 1] | @*[. eq '#']" priority="1" mode="build-codepoint-submap-entries"/>
    
    <xsl:template match="@*" mode="build-codepoint-submap-entries">
+      <xsl:param name="curr-cp-hex" as="xs:string" tunnel="yes"/>
+      
       <xsl:variable name="this-name" as="xs:string" select="name(.)"/>
-      <!-- The XML file has typos -->
-      <xsl:variable name="this-val" as="xs:string" select="
-            if (. eq 'none') then
-               'None'
-            else
-               ."/>
+      <xsl:variable name="this-val-norm" as="xs:string">
+         <xsl:choose>
+            <xsl:when test="$this-name = 'na' and contains(., '#')">
+               <!-- The hash in a name is a request to replace with the hex codepoint value. -->
+               <xsl:sequence select="replace(., '#', $curr-cp-hex)"/>
+            </xsl:when>
+            <xsl:when test="$this-name = 'dt' and matches(., '^[a-z]')">
+               <!-- The XML file occasionally lowercases, esp. for property dt. -->
+               <xsl:sequence select="upper-case(substring(., 1, 1)) || substring(., 2)"/>
+            </xsl:when>
+            <xsl:otherwise>
+               <xsl:sequence select="."/>
+            </xsl:otherwise>
+         </xsl:choose>
+      </xsl:variable>
       
 
       <xsl:variable name="property-entry" as="element()" select="$property-tree-pass-2/property[name = $this-name]"/>
-      <xsl:variable name="val-entry" as="element()?" select="$property-entry/values/val[(@short, @class) = $this-val]"/>
+      <xsl:variable name="val-entry" as="element()?" select="$property-entry/values/val[(@short, @class) = $this-val-norm]"/>
       
       <xsl:variable name="is-most-frequent" as="xs:boolean" select="exists($val-entry/@most-frequent)
-         or ($this-name = 'nv' and $this-val = 'NaN')"/>
+         or ($this-name = 'nv' and $this-val-norm = 'NaN')"/>
       
+      <!--<xsl:message select="$this-val"/>
+      <xsl:message select="$property-entry"/>-->
       <xsl:variable name="this-val-adjusted" as="xs:string">
          <xsl:choose>
-            <xsl:when test="$property-entry/type = 'boolean' and $this-val eq 'Y'">true()</xsl:when>
-            <xsl:when test="starts-with($property-entry/type, 'integer')">{$this-val}</xsl:when>
-            <xsl:when test="starts-with($property-entry/type, 'codepoint')">{string-join(tokenize($this-val) ! tan:hex-to-dec(.) => string(), ', ')}</xsl:when>
-            <xsl:otherwise>'{$this-val}'</xsl:otherwise>
+            <xsl:when test="$property-entry/type = 'boolean' and $this-val-norm eq 'Y'">
+               <xsl:sequence select="'true()'"/>
+            </xsl:when>
+            <xsl:when test="starts-with($property-entry/type, 'integer')">
+               <xsl:sequence select="$this-val-norm"/>
+            </xsl:when>
+            <xsl:when test="starts-with($property-entry/type, 'codepoint')">
+               <xsl:sequence
+                  select="string-join(tokenize($this-val-norm) ! string(tan:hex-to-dec(.)), ', ')"/>
+            </xsl:when>
+            <xsl:otherwise>
+               <xsl:sequence select="'''' || $this-val-norm || ''''"/>
+            </xsl:otherwise>
          </xsl:choose>
       </xsl:variable>
       
@@ -300,7 +317,7 @@
          <xsl:when test="$is-most-frequent"/>
          <xsl:when test="exists($property-entry/values/val) and not(exists($val-entry))">
             <xsl:message
-               select="'Cannot find property ' || $this-name || ' with value ' || $this-val"/>
+               select="'Cannot find property ' || $this-name || ' with value ' || $this-val-norm"/>
          </xsl:when>
          <xsl:otherwise>
             <xsl:element name="xsl:map-entry" namespace="http://www.w3.org/1999/XSL/Transform">
@@ -316,7 +333,7 @@
       <xsl:apply-templates select="$pass-1" mode="consolidate-submaps"/>
    </xsl:variable>
    
-   <!-- TODO: implement -->
+   <!-- TODO: implement; intended to do things for blocks that have repeated info, e.g., Private Use Area -->
    <xsl:mode name="consolidate-submaps" on-no-match="shallow-copy"/>
 
 
